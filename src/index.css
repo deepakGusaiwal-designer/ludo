@@ -10,11 +10,12 @@ body,
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #17251c;
+  background: #0f1c17;
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif;
+  color: #e2f1e7;
 }
 
 .ludo {
@@ -35,7 +36,36 @@ body {
 }
 
 /* =========================================================
-   HUD
+   LIQUID GLASS DESIGN SYSTEM (RAIN THEME)
+========================================================= */
+
+.panel,
+.hud-card,
+.camera-controls,
+.audio-toggle-btn,
+.reset-game-btn,
+.scoreboard,
+.turn-panel,
+.glass-modal-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.03) 100%
+  ),
+  rgba(15, 28, 22, 0.65);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-top-color: rgba(255, 255, 255, 0.38);
+  border-left-color: rgba(255, 255, 255, 0.32);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 36px 0 rgba(0, 0, 0, 0.42),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* =========================================================
+   HUD & BUTTONS
 ========================================================= */
 
 .hud {
@@ -44,106 +74,180 @@ body {
   left: 24px;
   z-index: 10;
   color: white;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   pointer-events: none;
 }
 
 .hud-title {
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  opacity: 0.65;
+  color: #a3e6be;
+  text-shadow: 0 0 12px rgba(163, 230, 190, 0.4);
 }
 
 .hud-subtitle {
-  margin-top: 5px;
+  margin-top: 3px;
   font-size: 11px;
-  opacity: 0.4;
+  opacity: 0.7;
+  color: #cbd5e1;
+}
+
+.audio-toggle-btn,
+.reset-game-btn,
+.cam-btn {
+  pointer-events: auto;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f1f5f9;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-toggle-btn,
+.reset-game-btn {
+  padding: 8px 14px;
+  border-radius: 20px;
+}
+
+.audio-toggle-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: rgba(186, 230, 253, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.3);
+}
+
+.reset-game-btn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.15));
+  border-color: rgba(254, 202, 202, 0.3);
+}
+
+.reset-game-btn:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(185, 28, 28, 0.3));
+  border-color: rgba(254, 202, 202, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+}
+
+.camera-controls {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 20px;
+}
+
+.camera-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-right: 4px;
+}
+
+.cam-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #cbd5e1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+
+.cam-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.cam-btn.active {
+  color: #0f1c17;
+  background: linear-gradient(135deg, #a3e6be, #34d399);
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.5);
 }
 
 /* =========================================================
-   PANELS
+   PANELS & TURN DISPLAY
 ========================================================= */
-
-.panel {
-  position: fixed;
-  z-index: 10;
-  color: #f4ead1;
-  background: rgba(20, 33, 25, 0.82);
-  border: 1px solid rgba(244, 234, 209, 0.13);
-  border-radius: 14px;
-  -webkit-backdrop-filter: blur(7px);
-  backdrop-filter: blur(7px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-}
 
 .turn-panel {
   right: 24px;
   bottom: 24px;
-  width: 236px;
-  padding: 16px 18px 18px;
+  width: 246px;
+  padding: 18px 20px 20px;
 }
 
 .turn-row {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
 }
 
 .turn-dot {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(244, 234, 209, 0.12);
-  transition: background 0.25s;
+  box-shadow: 0 0 12px currentColor;
 }
 
 .turn-name {
-  font-size: 15px;
-  font-weight: bold;
-  letter-spacing: 0.02em;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .turn-message {
-  margin-top: 9px;
-  margin-bottom: 12px;
-  min-height: 34px;
-  font-size: 12px;
+  margin-top: 10px;
+  margin-bottom: 14px;
+  min-height: 36px;
+  font-size: 13px;
   line-height: 1.45;
-  opacity: 0.72;
+  color: #cbd5e1;
 }
 
 .roll-button {
   width: 100%;
-  padding: 10px 0;
+  padding: 11px 0;
   font: inherit;
   font-size: 13px;
-  font-weight: bold;
-  letter-spacing: 0.04em;
-  color: #1b2a20;
-  background: #e8d9ae;
-  border: none;
-  border-radius: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #062615;
+  background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
   cursor: pointer;
-  transition:
-    transform 0.15s,
-    opacity 0.2s;
+  box-shadow:
+    0 6px 20px rgba(52, 211, 153, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .roll-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 28px rgba(52, 211, 153, 0.5);
 }
 
 .roll-button:disabled {
-  opacity: 0.32;
+  opacity: 0.35;
   cursor: default;
+  box-shadow: none;
 }
 
 .dice-readout {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 11px;
-  letter-spacing: 0.16em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  opacity: 0.45;
+  color: #94a3b8;
 }
 
 /* =========================================================
@@ -153,32 +257,31 @@ body {
 .scoreboard {
   right: 24px;
   top: 24px;
-  padding: 12px 14px;
-  min-width: 168px;
+  padding: 14px 16px;
+  min-width: 175px;
 }
 
 .score-row {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 5px 6px;
-  border-radius: 7px;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
   font-size: 12px;
-  opacity: 0.5;
-  transition:
-    opacity 0.25s,
-    background 0.25s;
+  opacity: 0.55;
+  transition: all 0.25s ease;
 }
 
 .score-row.active {
   opacity: 1;
-  background: rgba(244, 234, 209, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
 .score-swatch {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
 }
 
 .score-name {
@@ -186,8 +289,115 @@ body {
 }
 
 .score-count {
-  font-weight: bold;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+/* =========================================================
+   LIQUID GLASS RESET MODAL
+========================================================= */
+
+.glass-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 16, 12, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  animation: fadeIn 0.25s ease-out;
+}
+
+.glass-modal-card {
+  width: 90%;
+  max-width: 380px;
+  padding: 30px 28px;
+  text-align: center;
+  animation: modalScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-modal-icon {
+  font-size: 38px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.5));
+}
+
+.glass-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+
+.glass-modal-desc {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.glass-modal-actions {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.glass-btn {
+  flex: 1;
+  padding: 10px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-btn-secondary {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.glass-btn-danger {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.glass-btn-danger:hover {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* =========================================================
@@ -197,46 +407,50 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(11, 19, 14, 0.72);
+  background: rgba(8, 16, 12, 0.75);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 
 .overlay-card {
-  padding: 34px 46px;
+  padding: 36px 48px;
   text-align: center;
-  color: #f4ead1;
-  background: rgba(20, 33, 25, 0.95);
-  border: 1px solid rgba(244, 234, 209, 0.14);
-  border-radius: 18px;
+  color: #f8fafc;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)), rgba(15, 28, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
 .overlay-title {
-  font-size: 26px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 800;
   letter-spacing: 0.02em;
 }
 
 .overlay-subtitle {
   margin-top: 8px;
-  font-size: 12px;
-  opacity: 0.55;
+  font-size: 13px;
+  color: #cbd5e1;
 }
 
 .overlay .roll-button {
-  margin-top: 22px;
+  margin-top: 24px;
 }
 
 /* =========================================================
-   SMALL SCREENS
+   RESPONSIVE
 ========================================================= */
 
 @media (max-width: 640px) {
   .hud {
     top: 16px;
     left: 16px;
+    flex-wrap: wrap;
   }
 
   .turn-panel {
@@ -249,7 +463,7 @@ body {
   .scoreboard {
     right: 14px;
     top: 14px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     min-width: 0;
   }
 }

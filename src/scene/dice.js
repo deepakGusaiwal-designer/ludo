@@ -85,19 +85,55 @@ export function createDice() {
 
   const bodyGeometry = new THREE.BoxGeometry(1.25, 1.25, 1.25, 4, 4, 4);
 
-  const diceMesh = new THREE.Mesh(
-    bodyGeometry,
-    getMaterial("#ffffff", { roughness: 0.38 }),
-  );
+  const diceMaterial = new THREE.MeshPhysicalMaterial({
+    color: "#fcfaf4",
+    transmission: 0.35,
+    opacity: 0.98,
+    transparent: true,
+    roughness: 0.28,
+    metalness: 0.02,
+    ior: 1.45,
+    thickness: 0.7,
+    clearcoat: 0.25,
+    clearcoatRoughness: 0.3,
+    reflectivity: 0.5,
+  });
+
+  const diceMesh = new THREE.Mesh(bodyGeometry, diceMaterial);
 
   diceMesh.castShadow = true;
   diceMesh.receiveShadow = true;
 
   diceGroup.add(diceMesh);
 
-  const pipGeometry = new THREE.SphereGeometry(0.09, 12, 8);
+  // Soft inner core for subtle color diffusion
+  const innerGemGeometry = new THREE.OctahedronGeometry(0.5, 0);
+  const innerGemMaterial = new THREE.MeshStandardMaterial({
+    color: "#ffffff",
+    emissive: COLORS.red,
+    emissiveIntensity: 0.2,
+    roughness: 0.4,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.35,
+  });
+  const innerGem = new THREE.Mesh(innerGemGeometry, innerGemMaterial);
+  diceGroup.add(innerGem);
 
-  const pipMaterial = getMaterial("#302a22", { roughness: 0.65 });
+  const pipGeometry = new THREE.SphereGeometry(0.108, 16, 12);
+  const pipRingGeometry = new THREE.TorusGeometry(0.115, 0.018, 10, 24);
+
+  const pipMaterial = new THREE.MeshStandardMaterial({
+    color: "#111116",
+    roughness: 0.15,
+    metalness: 0.85,
+  });
+
+  const pipRingMaterial = new THREE.MeshStandardMaterial({
+    color: "#d4af37",
+    roughness: 0.3,
+    metalness: 0.9,
+  });
 
   function addFace(value, face) {
     for (const [px, py] of PIP_LAYOUT[value]) {
@@ -114,11 +150,17 @@ export function createDice() {
       }[face];
 
       const pip = new THREE.Mesh(pipGeometry, pipMaterial);
-
       pip.position.set(...position);
       pip.castShadow = true;
-
       diceGroup.add(pip);
+
+      // Gold highlight ring around each dot
+      const ring = new THREE.Mesh(pipRingGeometry, pipRingMaterial);
+      ring.position.set(...position);
+      if (face === "front" || face === "back") ring.rotation.x = 0;
+      else if (face === "top" || face === "bottom") ring.rotation.x = Math.PI / 2;
+      else ring.rotation.y = Math.PI / 2;
+      diceGroup.add(ring);
     }
   }
 
@@ -152,14 +194,7 @@ export function createDice() {
 
   function startIdle() {
     stopIdle();
-
-    idleTween = gsap.to(diceGroup.position, {
-      y: 1.35,
-      duration: 2.2,
-      repeat: -1,
-      yoyo: true,
-      ease: "sine.inOut",
-    });
+    diceGroup.position.y = 1.2;
   }
 
   function stopIdle() {
@@ -224,6 +259,7 @@ export function createDice() {
 
   function setTurnColor(color) {
     discMaterial.color.set(COLORS[color]);
+    innerGemMaterial.emissive.set(COLORS[color]);
   }
 
   function setHovered(hovered) {
@@ -243,7 +279,13 @@ export function createDice() {
     gsap.killTweensOf(diceGroup.scale);
 
     bodyGeometry.dispose();
+    diceMaterial.dispose();
+    innerGemGeometry.dispose();
+    innerGemMaterial.dispose();
     pipGeometry.dispose();
+    pipMaterial.dispose();
+    pipRingGeometry.dispose();
+    pipRingMaterial.dispose();
     discGeometry.dispose();
     discMaterial.dispose();
   }

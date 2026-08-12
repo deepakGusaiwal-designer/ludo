@@ -38,21 +38,53 @@ const rollValue = () => 1 + Math.floor(Math.random() * 6);
  *   moving    a token is travelling, input is locked
  *   over      somebody won
  */
+const STORAGE_KEY = "ludo_game_state";
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.state && Array.isArray(parsed.state.tokens)) {
+      if (parsed.status === "rolling" || parsed.status === "moving") {
+        parsed.status = "idle";
+        parsed.dice = null;
+        parsed.legalMoves = [];
+        parsed.message = `${labelFor(currentColor(parsed.state))} to roll.`;
+      }
+      return parsed;
+    }
+  } catch (e) {
+    console.error("Failed to load saved Ludo state:", e);
+  }
+  return null;
+}
+
 export function useLudoGame(sceneRef, ready) {
-  const machine = useRef({
-    state: createInitialState(),
-    status: "idle",
-    dice: null,
-    legalMoves: [],
-    message: "Red to roll. A 6 brings a token out of the yard.",
-  });
+  const machine = useRef(null);
+  if (!machine.current) {
+    machine.current = loadSavedState() || {
+      state: createInitialState(),
+      status: "idle",
+      dice: null,
+      legalMoves: [],
+      message: "Red to roll. A 6 brings a token out of the yard.",
+    };
+  }
 
   const alive = useRef(true);
 
   const [view, setView] = useState(() => ({ ...machine.current }));
 
   const publish = useCallback(() => {
-    if (alive.current) setView({ ...machine.current });
+    if (alive.current) {
+      setView({ ...machine.current });
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(machine.current));
+      } catch (e) {
+        console.error("Failed to save Ludo state:", e);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -264,6 +296,13 @@ export function useLudoGame(sceneRef, ready) {
 
     scene.setTurnColor(currentColor(machine.current.state));
     scene.syncPlacements(machine.current.state.tokens, false);
+
+    if (
+      machine.current.status === "choosing" &&
+      machine.current.legalMoves.length > 0
+    ) {
+      scene.setHighlights(machine.current.legalMoves);
+    }
 
     return () => {
       scene.onDiceClick(null);

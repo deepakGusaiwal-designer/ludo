@@ -2,13 +2,24 @@ import * as THREE from "three";
 
 import gsap from "gsap";
 
-import { TOKEN_HEIGHT } from "../game/constants.js";
+import { COLORS, TOKEN_HEIGHT } from "../game/constants.js";
 
 import { baseWorldPosition, placementsFor } from "../game/rules.js";
+
+import {
+  playClick,
+  playDiceRoll,
+  playTokenCapture,
+  playTokenFinish,
+  playTokenHop,
+  playTokenSpawn,
+  playVictoryFanfare,
+} from "../game/audio.js";
 
 import { createBoard } from "./board.js";
 import { createCameraRig } from "./cameraRig.js";
 import { createDice } from "./dice.js";
+import { createEffectsSystem } from "./effects.js";
 import { createForest } from "./forest.js";
 import { createTokens } from "./tokens.js";
 import { disposeMaterials } from "./materials.js";
@@ -78,6 +89,10 @@ export class LudoScene {
 
     this.scene.add(new THREE.HemisphereLight("#dcebd5", "#28362b", 1.7));
 
+    // Warm ambient fill light for softer overall illumination
+    const ambient = new THREE.AmbientLight("#e8dcc4", 0.65);
+    this.scene.add(ambient);
+
     const sun = new THREE.DirectionalLight("#ffe4b8", 3);
 
     sun.position.set(-15, 28, 12);
@@ -94,7 +109,19 @@ export class LudoScene {
 
     this.scene.add(sun);
 
+    // Cool blue-green fill from opposite side for forest depth
+    const fill = new THREE.DirectionalLight("#a4c8b0", 0.6);
+    fill.position.set(12, 10, -14);
+    this.scene.add(fill);
+
+    // Warm ground bounce light
+    const bounce = new THREE.PointLight("#d4a96a", 0.5, 40);
+    bounce.position.set(0, 0.5, 0);
+    this.scene.add(bounce);
+
     /* contents */
+
+    this.effects = createEffectsSystem(this.scene);
 
     this.forest = createForest({ isMobile });
 
@@ -120,14 +147,6 @@ export class LudoScene {
 
     this.scene.add(this.dice.diceGroup);
     this.scene.add(this.dice.turnDisc);
-
-    this.boardFloat = gsap.to(this.board.boardGroup.position, {
-      y: 0.04,
-      duration: 3,
-      repeat: -1,
-      yoyo: true,
-      ease: "sine.inOut",
-    });
 
     /* input */
 
@@ -169,7 +188,11 @@ export class LudoScene {
 
     this.frame = requestAnimationFrame(this.renderLoop);
 
+    const delta = this.clock.getDelta();
+
     this.forest.update(this.clock.getElapsedTime());
+
+    this.effects.update(delta);
 
     this.rig.update();
 
@@ -220,13 +243,17 @@ export class LudoScene {
     this.updatePointer(event);
 
     if (this.raycaster.intersectObject(this.dice.diceMesh).length) {
+      playClick();
       this.handlers.diceClick?.();
       return;
     }
 
     const token = this.pickToken();
 
-    if (token) this.handlers.tokenClick?.(token.userData.id);
+    if (token) {
+      playClick();
+      this.handlers.tokenClick?.(token.userData.id);
+    }
   }
 
   onPointerMove(event) {
@@ -249,16 +276,24 @@ export class LudoScene {
     }
 
     if (this.hoveredToken) {
-      gsap.to(this.hoveredToken.scale, { x: 1, y: 1, z: 1, duration: 0.2 });
+      const prevBase = this.hoveredToken.userData.baseScale || 1.0;
+      gsap.to(this.hoveredToken.scale, {
+        x: prevBase,
+        y: prevBase,
+        z: prevBase,
+        duration: 0.2,
+      });
     }
 
     this.hoveredToken = token;
 
     if (token) {
+      const base = token.userData.baseScale || 1.0;
+      const targetScale = base * 1.12;
       gsap.to(token.scale, {
-        x: 1.12,
-        y: 1.12,
-        z: 1.12,
+        x: targetScale,
+        y: targetScale,
+        z: targetScale,
         duration: 0.2,
         ease: "back.out(2)",
       });
@@ -280,7 +315,34 @@ export class LudoScene {
   /* game-facing API                                         */
   /* ------------------------------------------------------ */
 
+  setCameraAngle(mode) {
+    switch (mode) {
+      case "top":
+      case "2d":
+        this.rig.setAngle(1.15, 0, 24);
+        break;
+      case "red":
+        this.rig.setAngle(0.2, -Math.PI / 2, 25);
+        break;
+      case "green":
+        this.rig.setAngle(0.2, 0, 25);
+        break;
+      case "yellow":
+        this.rig.setAngle(0.2, Math.PI / 2, 25);
+        break;
+      case "blue":
+        this.rig.setAngle(0.2, Math.PI, 25);
+        break;
+      case "3d":
+      case "default":
+      default:
+        this.rig.setAngle(0, 0, 27);
+        break;
+    }
+  }
+
   rollDice(value) {
+    playDiceRoll();
     return this.dice.roll(value);
   }
 
@@ -298,19 +360,27 @@ export class LudoScene {
       const on = wanted.has(id);
 
       gsap.killTweensOf(ring.scale);
+      gsap.killTweensOf(ring.rotation);
 
       ring.scale.set(1, 1, 1);
       ring.visible = on;
 
       if (on) {
         gsap.to(ring.scale, {
-          x: 1.2,
-          y: 1.2,
-          z: 1.2,
-          duration: 0.6,
+          x: 1.25,
+          y: 1.25,
+          z: 1.25,
+          duration: 0.55,
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut",
+        });
+
+        gsap.to(ring.rotation, {
+          z: Math.PI * 2,
+          duration: 3.5,
+          repeat: -1,
+          ease: "none",
         });
       }
     }
@@ -318,7 +388,7 @@ export class LudoScene {
 
   /**
    * Snaps or slides every token to where the given game state
-   * says it should be, spreading any stack.
+   * says it should be, spreading any stack and shrinking stacked tokens.
    */
   syncPlacements(tokens, animate = false) {
     const placements = placementsFor(tokens);
@@ -330,15 +400,29 @@ export class LudoScene {
 
       if (!mesh) continue;
 
+      const count = position.count || 1;
+      const targetScale = count > 1 ? (count === 2 ? 0.76 : 0.66) : 1.0;
+      mesh.userData.baseScale = targetScale;
+
       if (!animate) {
         gsap.killTweensOf(mesh.position);
+        gsap.killTweensOf(mesh.scale);
         mesh.position.set(position.x, TOKEN_HEIGHT, position.z);
+        mesh.scale.set(targetScale, targetScale, targetScale);
         continue;
       }
 
       gsap.to(mesh.position, {
         x: position.x,
         z: position.z,
+        duration: 0.22,
+        ease: "power2.inOut",
+      });
+
+      gsap.to(mesh.scale, {
+        x: targetScale,
+        y: targetScale,
+        z: targetScale,
         duration: 0.22,
         ease: "power2.inOut",
       });
@@ -350,6 +434,7 @@ export class LudoScene {
     for (const mesh of this.tokens.all) {
       gsap.killTweensOf(mesh.position);
       gsap.killTweensOf(mesh.scale);
+      mesh.userData.baseScale = 1.0;
       mesh.scale.set(1, 1, 1);
     }
 
@@ -379,6 +464,17 @@ export class LudoScene {
 
     this.animating.delete(result.tokenId);
 
+    if (result.finished) {
+      playTokenFinish();
+      const pos = baseWorldPosition({ color, slot, position: result.to });
+      this.effects.triggerConfetti({ x: pos.x, y: TOKEN_HEIGHT + 0.5, z: pos.z }, 45);
+    }
+
+    if (result.won) {
+      playVictoryFanfare();
+      this.effects.triggerConfetti({ x: 0, y: 2, z: 0 }, 120);
+    }
+
     // knocked-out pieces fly home while the turn continues
     const flights = result.captured.map((id) => this.sendHome(id));
 
@@ -394,9 +490,17 @@ export class LudoScene {
 
     gsap.killTweensOf(mesh.position);
 
+    playTokenSpawn();
+
     return new Promise((resolve) => {
       gsap
-        .timeline({ onComplete: resolve })
+        .timeline({
+          onComplete: () => {
+            this.effects.triggerHopRipple(target, COLORS[color]);
+            this.triggerSquashBounce(mesh);
+            resolve();
+          },
+        })
         .to(mesh.position, { y: 1.6, duration: 0.22, ease: "power2.out" })
         .to(mesh.position, {
           x: target.x,
@@ -419,7 +523,7 @@ export class LudoScene {
     return new Promise((resolve) => {
       const timeline = gsap.timeline({ onComplete: resolve });
 
-      for (const position of path) {
+      path.forEach((position, stepIndex) => {
         const target = baseWorldPosition({ color, slot, position });
 
         timeline.to(mesh.position, {
@@ -427,6 +531,9 @@ export class LudoScene {
           z: target.z,
           duration: 0.2,
           ease: "power1.inOut",
+          onStart: () => {
+            playTokenHop(stepIndex, path.length);
+          },
         });
 
         timeline.to(
@@ -439,9 +546,35 @@ export class LudoScene {
           y: TOKEN_HEIGHT,
           duration: 0.1,
           ease: "bounce.out",
+          onComplete: () => {
+            this.effects.triggerHopRipple(target, COLORS[color]);
+            this.triggerSquashBounce(mesh);
+          },
         });
-      }
+      });
     });
+  }
+
+  /** Squash on landing impact, then spring back smoothly */
+  triggerSquashBounce(mesh) {
+    const baseScale = mesh.userData.baseScale || 1.0;
+    gsap.killTweensOf(mesh.scale);
+    gsap
+      .timeline()
+      .to(mesh.scale, {
+        x: baseScale * 1.14,
+        y: baseScale * 0.82,
+        z: baseScale * 1.14,
+        duration: 0.07,
+        ease: "power2.out",
+      })
+      .to(mesh.scale, {
+        x: baseScale,
+        y: baseScale,
+        z: baseScale,
+        duration: 0.18,
+        ease: "back.out(2.2)",
+      });
   }
 
   sendHome(tokenId) {
@@ -457,10 +590,13 @@ export class LudoScene {
 
     gsap.killTweensOf(mesh.position);
 
+    playTokenCapture();
+
     return new Promise((resolve) => {
       gsap
         .timeline({
           onComplete: () => {
+            this.effects.triggerHopRipple(target, "#ff4444");
             this.animating.delete(tokenId);
             resolve();
           },
@@ -506,6 +642,7 @@ export class LudoScene {
     );
     window.removeEventListener("resize", this.onResize);
 
+    this.effects?.dispose();
     this.rig.dispose();
     this.dice.dispose();
     this.tokens.dispose();

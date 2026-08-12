@@ -1,25 +1,19 @@
 import * as THREE from "three";
-
 import gsap from "gsap";
 
 const DEFAULT_DISTANCE = 27;
 
 /**
- * Drag to orbit, wheel to zoom.
+ * Camera rig with unrestricted user orbit control and angle preset support.
  *
- * The rig rebuilds camera.position every frame, so nothing
- * may write to the camera directly — a tween on
- * camera.position would be overwritten before it is drawn.
- * Framing changes go through focusOn/reset instead, which
- * move the orbit target and distance.
+ * User can drag to orbit 360° and zoom with wheel/pinch. Camera maintains
+ * the exact user-selected angle without drifting back.
  */
 export function createCameraRig(camera, domElement) {
   const target = new THREE.Vector3(0, 0, 0);
-
   const orbit = { distance: DEFAULT_DISTANCE, height: 14 };
 
   let dragging = false;
-
   let previousX = 0;
   let previousY = 0;
 
@@ -39,10 +33,11 @@ export function createCameraRig(camera, domElement) {
   function onPointerMove(event) {
     if (!dragging) return;
 
-    targetRotationY += (event.clientX - previousX) * 0.004;
-    targetRotationX += (event.clientY - previousY) * 0.002;
+    targetRotationY += (event.clientX - previousX) * 0.005;
+    targetRotationX += (event.clientY - previousY) * 0.003;
 
-    targetRotationX = THREE.MathUtils.clamp(targetRotationX, -0.25, 0.35);
+    // Pitch limit: allow low perspective up to steep top-down view
+    targetRotationX = THREE.MathUtils.clamp(targetRotationX, -0.65, 1.25);
 
     previousX = event.clientX;
     previousY = event.clientY;
@@ -50,7 +45,6 @@ export function createCameraRig(camera, domElement) {
 
   function onPointerUp(event) {
     dragging = false;
-
     if (domElement.hasPointerCapture?.(event.pointerId)) {
       domElement.releasePointerCapture(event.pointerId);
     }
@@ -58,13 +52,12 @@ export function createCameraRig(camera, domElement) {
 
   function onWheel(event) {
     event.preventDefault();
-
     gsap.killTweensOf(orbit);
 
     orbit.distance = THREE.MathUtils.clamp(
-      orbit.distance + event.deltaY * 0.01,
-      16,
-      35,
+      orbit.distance + event.deltaY * 0.012,
+      14,
+      38,
     );
   }
 
@@ -75,13 +68,18 @@ export function createCameraRig(camera, domElement) {
   domElement.addEventListener("wheel", onWheel, { passive: false });
 
   function update() {
-    if (!dragging) {
-      targetRotationY *= 0.995;
-      targetRotationX *= 0.995;
-    }
+    // Keep camera above ground height (y >= 2.0) to prevent viewing bottom of environment
+    const minHeight = 2.0;
+    const minRotX = Math.asin(
+      THREE.MathUtils.clamp((minHeight - orbit.height) / orbit.distance, -0.99, 0.99),
+    );
 
-    currentRotationY += (targetRotationY - currentRotationY) * 0.04;
-    currentRotationX += (targetRotationX - currentRotationX) * 0.04;
+    targetRotationX = Math.max(targetRotationX, minRotX);
+    currentRotationX = Math.max(currentRotationX, minRotX);
+
+    // Camera holds user angle steadily without decaying
+    currentRotationY += (targetRotationY - currentRotationY) * 0.08;
+    currentRotationX += (targetRotationX - currentRotationX) * 0.08;
 
     const horizontal = orbit.distance * Math.cos(currentRotationX);
 
@@ -91,6 +89,26 @@ export function createCameraRig(camera, domElement) {
       orbit.height + Math.sin(currentRotationX) * orbit.distance;
 
     camera.lookAt(target);
+  }
+
+  function setAngle(rotX, rotY, distance = DEFAULT_DISTANCE) {
+    gsap.killTweensOf(orbit);
+    gsap.to(orbit, { distance, duration: 0.9, ease: "power2.inOut" });
+
+    const animObj = { rx: targetRotationX, ry: targetRotationY };
+
+    gsap.to(animObj, {
+      rx: rotX,
+      ry: rotY,
+      duration: 0.9,
+      ease: "power2.inOut",
+      onUpdate: () => {
+        targetRotationX = animObj.rx;
+        targetRotationY = animObj.ry;
+      },
+    });
+
+    gsap.to(target, { x: 0, y: 0, z: 0, duration: 0.9, ease: "power2.inOut" });
   }
 
   function focusOn(point, distance = 13) {
@@ -106,19 +124,7 @@ export function createCameraRig(camera, domElement) {
   }
 
   function reset() {
-    gsap.to(target, {
-      x: 0,
-      y: 0,
-      z: 0,
-      duration: 1.2,
-      ease: "power3.inOut",
-    });
-
-    gsap.to(orbit, {
-      distance: DEFAULT_DISTANCE,
-      duration: 1.2,
-      ease: "power3.inOut",
-    });
+    setAngle(0, 0, DEFAULT_DISTANCE);
   }
 
   function dispose() {
@@ -132,5 +138,5 @@ export function createCameraRig(camera, domElement) {
     domElement.removeEventListener("wheel", onWheel);
   }
 
-  return { target, orbit, update, focusOn, reset, dispose };
+  return { target, orbit, update, focusOn, reset, setAngle, dispose };
 }
