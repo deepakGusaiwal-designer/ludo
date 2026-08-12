@@ -1,0 +1,3666 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>3D Ludo Forest</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #17251c;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+      }
+
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .hud {
+        position: fixed;
+        top: 24px;
+        left: 24px;
+        z-index: 10;
+        color: white;
+        pointer-events: none;
+      }
+
+      .hud-title {
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        opacity: 0.65;
+      }
+
+      .hud-subtitle {
+        margin-top: 5px;
+        font-size: 11px;
+        opacity: 0.4;
+      }
+
+      /* =====================================================
+         GAME UI
+      ===================================================== */
+
+      .panel {
+        position: fixed;
+        z-index: 10;
+        color: #f4ead1;
+        background: rgba(20, 33, 25, 0.82);
+        border: 1px solid rgba(244, 234, 209, 0.13);
+        border-radius: 14px;
+        -webkit-backdrop-filter: blur(7px);
+        backdrop-filter: blur(7px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+      }
+
+      #turnPanel {
+        right: 24px;
+        bottom: 24px;
+        width: 236px;
+        padding: 16px 18px 18px;
+      }
+
+      .turn-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .turn-dot {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: #d94b4b;
+        box-shadow: 0 0 0 3px rgba(244, 234, 209, 0.12);
+        transition: background 0.25s;
+      }
+
+      .turn-name {
+        font-size: 15px;
+        font-weight: bold;
+        letter-spacing: 0.02em;
+      }
+
+      .turn-message {
+        margin-top: 9px;
+        min-height: 32px;
+        font-size: 12px;
+        line-height: 1.45;
+        opacity: 0.72;
+      }
+
+      .roll-button {
+        margin-top: 4px;
+        width: 100%;
+        padding: 10px 0;
+        font: inherit;
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
+        color: #1b2a20;
+        background: #e8d9ae;
+        border: none;
+        border-radius: 9px;
+        cursor: pointer;
+        transition:
+          transform 0.15s,
+          opacity 0.2s;
+      }
+
+      .roll-button:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      .roll-button:disabled {
+        opacity: 0.32;
+        cursor: default;
+      }
+
+      .dice-readout {
+        margin-top: 10px;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        opacity: 0.45;
+      }
+
+      #scorePanel {
+        right: 24px;
+        top: 24px;
+        padding: 12px 14px;
+        min-width: 168px;
+      }
+
+      .score-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 5px 6px;
+        border-radius: 7px;
+        font-size: 12px;
+        opacity: 0.5;
+        transition:
+          opacity 0.25s,
+          background 0.25s;
+      }
+
+      .score-row.active {
+        opacity: 1;
+        background: rgba(244, 234, 209, 0.1);
+      }
+
+      .score-swatch {
+        width: 11px;
+        height: 11px;
+        border-radius: 3px;
+      }
+
+      .score-name {
+        flex: 1;
+      }
+
+      .score-count {
+        font-weight: bold;
+        letter-spacing: 0.05em;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(11, 19, 14, 0.72);
+      }
+
+      .overlay.show {
+        display: flex;
+      }
+
+      .overlay-card {
+        padding: 34px 46px;
+        text-align: center;
+        color: #f4ead1;
+        background: rgba(20, 33, 25, 0.95);
+        border: 1px solid rgba(244, 234, 209, 0.14);
+        border-radius: 18px;
+      }
+
+      .overlay-title {
+        font-size: 26px;
+        font-weight: bold;
+        letter-spacing: 0.02em;
+      }
+
+      .overlay-subtitle {
+        margin-top: 8px;
+        font-size: 12px;
+        opacity: 0.55;
+      }
+
+      .overlay .roll-button {
+        margin-top: 22px;
+      }
+
+      @media (max-width: 640px) {
+        #turnPanel {
+          right: 14px;
+          left: 14px;
+          bottom: 14px;
+          width: auto;
+        }
+
+        #scorePanel {
+          right: 14px;
+          top: 14px;
+          padding: 8px 10px;
+          min-width: 0;
+        }
+
+        .hud {
+          top: 16px;
+          left: 16px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+
+    <div class="hud">
+      <div class="hud-title">Forest Ludo</div>
+      <div class="hud-subtitle">A peaceful game board</div>
+    </div>
+
+    <div class="panel" id="scorePanel"></div>
+
+    <div class="panel" id="turnPanel">
+      <div class="turn-row">
+        <span class="turn-dot" id="turnDot"></span>
+        <span class="turn-name" id="turnName">Red</span>
+      </div>
+
+      <div class="turn-message" id="turnMessage">Roll the dice to begin.</div>
+
+      <button class="roll-button" id="rollButton" type="button">Roll dice</button>
+
+      <div class="dice-readout" id="diceReadout">Dice —</div>
+    </div>
+
+    <div class="overlay" id="winOverlay">
+      <div class="overlay-card">
+        <div class="overlay-title" id="winTitle">Red wins</div>
+
+        <div class="overlay-subtitle">All four tokens are home.</div>
+
+        <button class="roll-button" id="restartButton" type="button">
+          Play again
+        </button>
+      </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      /* =========================================================
+     CONFIG
+  ========================================================= */
+
+      const CONFIG = {
+        forestRadius: 32,
+        boardSafeRadius: 8,
+
+        treeCount: 42,
+        bushCount: 45,
+        rockCount: 40,
+        grassCount: 180,
+        logCount: 7,
+
+        mobileTreeCount: 25,
+        mobileGrassCount: 80,
+
+        fogNear: 18,
+        fogFar: 58,
+      };
+
+      /* =========================================================
+     SCENE
+  ========================================================= */
+
+      const scene = new THREE.Scene();
+
+      scene.background = new THREE.Color("#304338");
+
+      scene.fog = new THREE.Fog(
+        new THREE.Color("#304338"),
+        CONFIG.fogNear,
+        CONFIG.fogFar,
+      );
+
+      /* =========================================================
+     CAMERA
+  ========================================================= */
+
+      const camera = new THREE.PerspectiveCamera(
+        42,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        100,
+      );
+
+      camera.position.set(0, 17, 21);
+
+      camera.lookAt(0, 0, 0);
+
+      /* =========================================================
+     RENDERER
+  ========================================================= */
+
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: "high-performance",
+      });
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+
+      document.getElementById("app").appendChild(renderer.domElement);
+
+      /* =========================================================
+     LIGHTING
+  ========================================================= */
+
+      const hemisphereLight = new THREE.HemisphereLight(
+        "#dcebd5",
+        "#28362b",
+        1.7,
+      );
+
+      scene.add(hemisphereLight);
+
+      const sun = new THREE.DirectionalLight("#ffe4b8", 3);
+
+      sun.position.set(-15, 28, 12);
+
+      sun.castShadow = true;
+
+      sun.shadow.mapSize.width = 2048;
+      sun.shadow.mapSize.height = 2048;
+
+      sun.shadow.camera.left = -25;
+      sun.shadow.camera.right = 25;
+      sun.shadow.camera.top = 25;
+      sun.shadow.camera.bottom = -25;
+
+      sun.shadow.camera.near = 1;
+      sun.shadow.camera.far = 70;
+
+      sun.shadow.bias = -0.0003;
+
+      scene.add(sun);
+
+      /* =========================================================
+     COLORS
+  ========================================================= */
+
+      const COLORS = {
+        ground: "#334535",
+
+        treeTrunk: ["#594431", "#644b34", "#715239"],
+
+        foliage: ["#2c4932", "#34543a", "#3e6041", "#466746", "#2a412f"],
+
+        bush: ["#304d35", "#3b5b3d", "#456744", "#263f2d"],
+
+        rock: ["#5d6258", "#67695f", "#4d554c", "#726e61"],
+
+        grass: ["#506847", "#5c714e", "#405a3d", "#667855"],
+
+        log: ["#523b2b", "#62452e", "#463426"],
+      };
+
+      /* =========================================================
+     UTILS
+  ========================================================= */
+
+      function random(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      function randomInt(min, max) {
+        return Math.floor(random(min, max + 1));
+      }
+
+      function pick(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      }
+
+      function randomSign() {
+        return Math.random() > 0.5 ? 1 : -1;
+      }
+
+      /* =========================================================
+     MATERIAL CACHE
+  ========================================================= */
+
+      const materialCache = new Map();
+
+      function getMaterial(color, options = {}) {
+        const key = [
+          color,
+          options.roughness ?? 1,
+          options.metalness ?? 0,
+          options.transparent ?? false,
+        ].join("_");
+
+        if (materialCache.has(key)) {
+          return materialCache.get(key);
+        }
+
+        const material = new THREE.MeshStandardMaterial({
+          color,
+          roughness: options.roughness ?? 1,
+          metalness: options.metalness ?? 0,
+          transparent: options.transparent ?? false,
+          opacity: options.opacity ?? 1,
+        });
+
+        materialCache.set(key, material);
+
+        return material;
+      }
+
+      /* =========================================================
+     SHARED GEOMETRIES
+  ========================================================= */
+
+      const geometries = {
+        treeTrunk: new THREE.CylinderGeometry(0.22, 0.34, 2.8, 7),
+
+        foliageLarge: new THREE.IcosahedronGeometry(1.55, 1),
+
+        foliageMedium: new THREE.IcosahedronGeometry(1.15, 1),
+
+        foliageSmall: new THREE.IcosahedronGeometry(0.8, 1),
+
+        bush: new THREE.IcosahedronGeometry(0.7, 1),
+
+        rock: new THREE.IcosahedronGeometry(0.55, 1),
+
+        grass: new THREE.ConeGeometry(0.045, 0.55, 4),
+
+        log: new THREE.CylinderGeometry(0.22, 0.27, 2.5, 7),
+      };
+
+      /* =========================================================
+     FOREST GROUP
+  ========================================================= */
+
+      const forest = new THREE.Group();
+
+      scene.add(forest);
+
+      /* =========================================================
+     TREE
+  ========================================================= */
+
+      function createTree() {
+        const tree = new THREE.Group();
+
+        const height = random(0.85, 1.35);
+
+        const trunkMaterial = getMaterial(pick(COLORS.treeTrunk));
+
+        const trunk = new THREE.Mesh(geometries.treeTrunk, trunkMaterial);
+
+        trunk.scale.set(height, height, height);
+
+        trunk.position.y = 1.4 * height;
+
+        trunk.rotation.z = random(-0.05, 0.05);
+
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
+
+        tree.add(trunk);
+
+        const foliageMaterial = getMaterial(pick(COLORS.foliage));
+
+        const bottom = new THREE.Mesh(geometries.foliageLarge, foliageMaterial);
+
+        bottom.position.y = 2.65 * height;
+
+        bottom.scale.set(1.25 * height, 0.9 * height, 1.25 * height);
+
+        bottom.castShadow = true;
+
+        tree.add(bottom);
+
+        const middle = new THREE.Mesh(
+          geometries.foliageMedium,
+          foliageMaterial,
+        );
+
+        middle.position.y = 3.75 * height;
+
+        middle.position.x = random(-0.15, 0.15);
+
+        middle.scale.set(1.05 * height, 1.05 * height, 1.05 * height);
+
+        middle.castShadow = true;
+
+        tree.add(middle);
+
+        const top = new THREE.Mesh(geometries.foliageSmall, foliageMaterial);
+
+        top.position.y = 4.65 * height;
+
+        top.position.x = random(-0.15, 0.15);
+
+        top.scale.set(0.9 * height, 0.9 * height, 0.9 * height);
+
+        top.castShadow = true;
+
+        tree.add(top);
+
+        tree.scale.setScalar(random(0.85, 1.15));
+
+        tree.rotation.y = random(0, Math.PI * 2);
+
+        tree.userData = {
+          swayAmount: random(0.008, 0.018),
+
+          swaySpeed: random(2.5, 5),
+
+          phase: random(0, Math.PI * 2),
+        };
+
+        return tree;
+      }
+
+      /* =========================================================
+     TREE POSITION
+  ========================================================= */
+
+      function getForestPosition() {
+        let x;
+        let z;
+
+        do {
+          const angle = random(0, Math.PI * 2);
+
+          const radius = random(11, CONFIG.forestRadius);
+
+          x = Math.cos(angle) * radius;
+
+          z = Math.sin(angle) * radius;
+        } while (Math.sqrt(x * x + z * z) < CONFIG.boardSafeRadius);
+
+        return {
+          x,
+          z,
+        };
+      }
+
+      /* =========================================================
+     CREATE TREES
+  ========================================================= */
+
+      const isMobile = window.innerWidth < 768;
+
+      const treeCount = isMobile ? CONFIG.mobileTreeCount : CONFIG.treeCount;
+
+      for (let i = 0; i < treeCount; i++) {
+        const tree = createTree();
+
+        const pos = getForestPosition();
+
+        tree.position.set(pos.x, 0, pos.z);
+
+        forest.add(tree);
+      }
+
+      /* =========================================================
+     BUSH
+  ========================================================= */
+
+      function createBush() {
+        const bush = new THREE.Group();
+
+        const material = getMaterial(pick(COLORS.bush));
+
+        const count = randomInt(3, 6);
+
+        for (let i = 0; i < count; i++) {
+          const mesh = new THREE.Mesh(geometries.bush, material);
+
+          const scale = random(0.5, 1);
+
+          mesh.scale.set(scale * 1.2, scale * random(0.7, 1), scale);
+
+          mesh.position.set(random(-0.5, 0.5), scale * 0.45, random(-0.5, 0.5));
+
+          mesh.castShadow = true;
+
+          bush.add(mesh);
+        }
+
+        bush.rotation.y = random(0, Math.PI * 2);
+
+        return bush;
+      }
+
+      for (let i = 0; i < CONFIG.bushCount; i++) {
+        const bush = createBush();
+
+        const pos = getForestPosition();
+
+        bush.position.set(pos.x, 0, pos.z);
+
+        bush.scale.setScalar(random(0.8, 1.4));
+
+        forest.add(bush);
+      }
+
+      /* =========================================================
+     ROCKS
+  ========================================================= */
+
+      function createRock() {
+        const material = getMaterial(pick(COLORS.rock));
+
+        const rock = new THREE.Mesh(geometries.rock, material);
+
+        const scale = random(0.3, 1);
+
+        rock.scale.set(
+          scale * random(1.1, 1.8),
+          scale * random(0.5, 0.9),
+          scale * random(0.8, 1.3),
+        );
+
+        rock.rotation.set(
+          random(0, Math.PI),
+          random(0, Math.PI),
+          random(0, Math.PI),
+        );
+
+        rock.position.y = scale * 0.25;
+
+        rock.castShadow = true;
+
+        return rock;
+      }
+
+      for (let i = 0; i < CONFIG.rockCount; i++) {
+        const rock = createRock();
+
+        const pos = getForestPosition();
+
+        rock.position.x = pos.x;
+
+        rock.position.z = pos.z;
+
+        forest.add(rock);
+      }
+
+      /* =========================================================
+     GRASS
+  ========================================================= */
+
+      const grassGroup = new THREE.Group();
+
+      forest.add(grassGroup);
+
+      function createGrassCluster() {
+        const group = new THREE.Group();
+
+        const material = getMaterial(pick(COLORS.grass));
+
+        const bladeCount = randomInt(4, 8);
+
+        for (let i = 0; i < bladeCount; i++) {
+          const blade = new THREE.Mesh(geometries.grass, material);
+
+          blade.position.set(random(-0.3, 0.3), 0.25, random(-0.3, 0.3));
+
+          blade.rotation.z = random(-0.3, 0.3);
+
+          blade.rotation.y = random(0, Math.PI * 2);
+
+          group.add(blade);
+        }
+
+        return group;
+      }
+
+      const grassCount = isMobile ? CONFIG.mobileGrassCount : CONFIG.grassCount;
+
+      for (let i = 0; i < grassCount; i++) {
+        const grass = createGrassCluster();
+
+        const pos = getForestPosition();
+
+        grass.position.set(pos.x, 0, pos.z);
+
+        grass.scale.setScalar(random(0.6, 1.2));
+
+        grassGroup.add(grass);
+      }
+
+      /* =========================================================
+     FALLEN LOGS
+  ========================================================= */
+
+      function createLog() {
+        const log = new THREE.Group();
+
+        const material = getMaterial(pick(COLORS.log));
+
+        const body = new THREE.Mesh(geometries.log, material);
+
+        body.rotation.z = Math.PI / 2;
+
+        body.castShadow = true;
+
+        log.add(body);
+
+        const endMaterial = getMaterial("#3c2b20");
+
+        const endGeometry = new THREE.CircleGeometry(0.22, 8);
+
+        const end = new THREE.Mesh(endGeometry, endMaterial);
+
+        end.rotation.y = Math.PI / 2;
+
+        end.position.x = 1.25;
+
+        log.add(end);
+
+        return log;
+      }
+
+      for (let i = 0; i < CONFIG.logCount; i++) {
+        const log = createLog();
+
+        const pos = getForestPosition();
+
+        log.position.set(pos.x, 0.25, pos.z);
+
+        log.rotation.y = random(0, Math.PI * 2);
+
+        log.scale.setScalar(random(0.7, 1.1));
+
+        forest.add(log);
+      }
+
+      /* =========================================================
+     GROUND
+  ========================================================= */
+
+      const groundGeometry = new THREE.CircleGeometry(45, 64);
+
+      const groundMaterial = getMaterial(COLORS.ground, {
+        roughness: 1,
+      });
+
+      const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+
+      ground.rotation.x = -Math.PI / 2;
+
+      ground.position.y = -0.03;
+
+      ground.receiveShadow = true;
+
+      scene.add(ground);
+
+      /* =========================================================
+     3D LUDO BOARD
+  ========================================================= */
+
+      const LUDO = {
+        size: 15,
+        cellSize: 0.58,
+        boardHeight: 0.42,
+        tileHeight: 0.12,
+
+        colors: {
+          red: "#d94b4b",
+          green: "#4f9b68",
+          yellow: "#e4bd4f",
+          blue: "#527bb8",
+
+          redDark: "#a93434",
+          greenDark: "#39734b",
+          yellowDark: "#b18a2d",
+          blueDark: "#3d6095",
+
+          white: "#f4ead1",
+          cream: "#eadcbb",
+          dark: "#3b3328",
+          center: "#d9c08a",
+        },
+      };
+
+      const BOARD_SIZE = LUDO.size * LUDO.cellSize;
+
+      const boardGroup = new THREE.Group();
+
+      boardGroup.name = "LudoBoard";
+
+      scene.add(boardGroup);
+
+      /* =========================================================
+     BOARD MATERIALS
+  ========================================================= */
+
+      const ludoMaterials = {
+        base: getMaterial("#8b6545", { roughness: 0.8 }),
+
+        board: getMaterial(LUDO.colors.cream, { roughness: 0.72 }),
+
+        white: getMaterial(LUDO.colors.white, { roughness: 0.72 }),
+
+        dark: getMaterial(LUDO.colors.dark, { roughness: 0.75 }),
+
+        red: getMaterial(LUDO.colors.red, { roughness: 0.55 }),
+
+        green: getMaterial(LUDO.colors.green, { roughness: 0.55 }),
+
+        yellow: getMaterial(LUDO.colors.yellow, { roughness: 0.55 }),
+
+        blue: getMaterial(LUDO.colors.blue, { roughness: 0.55 }),
+      };
+
+      /* =========================================================
+     BOARD BASE
+  ========================================================= */
+
+      const boardBaseGeometry = new THREE.BoxGeometry(
+        BOARD_SIZE + 0.65,
+        LUDO.boardHeight,
+        BOARD_SIZE + 0.65,
+      );
+
+      const boardBase = new THREE.Mesh(boardBaseGeometry, ludoMaterials.base);
+
+      boardBase.position.y = 0.25;
+
+      boardBase.castShadow = true;
+      boardBase.receiveShadow = true;
+
+      boardGroup.add(boardBase);
+
+      /* =========================================================
+     BOARD TOP
+  ========================================================= */
+
+      const boardTopGeometry = new THREE.BoxGeometry(
+        BOARD_SIZE,
+        0.12,
+        BOARD_SIZE,
+      );
+
+      const boardTop = new THREE.Mesh(boardTopGeometry, ludoMaterials.board);
+
+      boardTop.position.y = 0.53;
+
+      boardTop.receiveShadow = true;
+
+      boardGroup.add(boardTop);
+
+      /* =========================================================
+     GRID
+  ========================================================= */
+
+      const gridGroup = new THREE.Group();
+
+      gridGroup.name = "LudoGrid";
+
+      boardGroup.add(gridGroup);
+
+      function cellToWorld(row, col) {
+        return {
+          x: (col - (LUDO.size - 1) / 2) * LUDO.cellSize,
+
+          z: (row - (LUDO.size - 1) / 2) * LUDO.cellSize,
+        };
+      }
+
+      function createCell(row, col, material) {
+        const geometry = new THREE.BoxGeometry(
+          LUDO.cellSize * 0.94,
+          LUDO.tileHeight,
+          LUDO.cellSize * 0.94,
+        );
+
+        const mesh = new THREE.Mesh(geometry, material);
+
+        const position = cellToWorld(row, col);
+
+        mesh.position.set(position.x, 0.63, position.z);
+
+        mesh.receiveShadow = true;
+
+        mesh.userData = {
+          row,
+          col,
+          ludoCell: true,
+        };
+
+        gridGroup.add(mesh);
+
+        return mesh;
+      }
+
+      /* =========================================================
+     BASE GRID
+  ========================================================= */
+
+      for (let row = 0; row < 15; row++) {
+        for (let col = 0; col < 15; col++) {
+          createCell(row, col, ludoMaterials.white);
+        }
+      }
+
+      /* =========================================================
+     HOME AREAS
+  ========================================================= */
+
+      const HOME_SIZE = 6;
+
+      const homeDefinitions = [
+        {
+          name: "red",
+          row: 0,
+          col: 0,
+          material: ludoMaterials.red,
+        },
+
+        {
+          name: "green",
+          row: 0,
+          col: 9,
+          material: ludoMaterials.green,
+        },
+
+        {
+          name: "yellow",
+          row: 9,
+          col: 9,
+          material: ludoMaterials.yellow,
+        },
+
+        {
+          name: "blue",
+          row: 9,
+          col: 0,
+          material: ludoMaterials.blue,
+        },
+      ];
+
+      function createHomeArea(definition) {
+        const group = new THREE.Group();
+
+        group.name = `${definition.name}Home`;
+
+        const width = HOME_SIZE * LUDO.cellSize;
+
+        const geometry = new THREE.BoxGeometry(width, 0.14, width);
+
+        const home = new THREE.Mesh(geometry, definition.material);
+
+        const centerRow = definition.row + 2.5;
+
+        const centerCol = definition.col + 2.5;
+
+        const position = cellToWorld(centerRow, centerCol);
+
+        home.position.set(position.x, 0.73, position.z);
+
+        home.receiveShadow = true;
+
+        group.add(home);
+
+        /*
+         * Inner cream area
+         */
+
+        const innerSize = 4.3 * LUDO.cellSize;
+
+        const innerGeometry = new THREE.BoxGeometry(innerSize, 0.08, innerSize);
+
+        const inner = new THREE.Mesh(innerGeometry, ludoMaterials.white);
+
+        inner.position.y = 0.11;
+
+        inner.receiveShadow = true;
+
+        group.add(inner);
+
+        /*
+         * Four token slots
+         */
+
+        const slotPositions = [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ];
+
+        slotPositions.forEach(([x, z]) => {
+          const slotGeometry = new THREE.CylinderGeometry(
+            0.18,
+            0.18,
+            0.035,
+            20,
+          );
+
+          const slot = new THREE.Mesh(slotGeometry, definition.material);
+
+          slot.position.set(x * 0.72, 0.18, z * 0.72);
+
+          group.add(slot);
+        });
+
+        group.position.y = 0.62;
+
+        boardGroup.add(group);
+
+        return group;
+      }
+
+      homeDefinitions.forEach(createHomeArea);
+
+      /* =========================================================
+     SAFE PATH COLORS
+  ========================================================= */
+
+      const safePaths = {
+        red: [
+          [7, 1],
+          [7, 2],
+          [7, 3],
+          [7, 4],
+          [7, 5],
+        ],
+
+        green: [
+          [1, 7],
+          [2, 7],
+          [3, 7],
+          [4, 7],
+          [5, 7],
+        ],
+
+        yellow: [
+          [7, 13],
+          [7, 12],
+          [7, 11],
+          [7, 10],
+          [7, 9],
+        ],
+
+        blue: [
+          [13, 7],
+          [12, 7],
+          [11, 7],
+          [10, 7],
+          [9, 7],
+        ],
+      };
+
+      function getColorMaterial(color) {
+        return ludoMaterials[color];
+      }
+
+      Object.entries(safePaths).forEach(([color, cells]) => {
+        cells.forEach(([row, col]) => {
+          const position = cellToWorld(row, col);
+
+          const geometry = new THREE.BoxGeometry(
+            LUDO.cellSize * 0.94,
+            0.035,
+            LUDO.cellSize * 0.94,
+          );
+
+          const mesh = new THREE.Mesh(geometry, getColorMaterial(color));
+
+          mesh.position.set(position.x, 0.72, position.z);
+
+          boardGroup.add(mesh);
+        });
+      });
+
+      /* =========================================================
+     START SQUARES + SAFE STARS
+  ========================================================= */
+
+      /*
+       * The painted markings on the ring, as [row, col] cells.
+       *
+       *   start    – the square a token enters on
+       *   entrance – the last ring square before the home lane
+       *   star     – the squares where no capture happens
+       *
+       * Together the four starts and the four stars are the
+       * eight safe squares, kept as ring indexes in
+       * SAFE_TRACK_INDEXES with the rules engine below.
+       */
+
+      const MARKED_CELLS = {
+        red: { start: [6, 1], entrance: [7, 0] },
+        green: { start: [1, 8], entrance: [0, 7] },
+        yellow: { start: [8, 13], entrance: [7, 14] },
+        blue: { start: [13, 6], entrance: [14, 7] },
+      };
+
+      const STAR_CELLS = [
+        [2, 6],
+        [6, 12],
+        [12, 8],
+        [8, 2],
+      ];
+
+      Object.entries(MARKED_CELLS).forEach(([color, cells]) => {
+        [cells.start, cells.entrance].forEach(([row, col]) => {
+          const position = cellToWorld(row, col);
+
+          const geometry = new THREE.BoxGeometry(
+            LUDO.cellSize * 0.94,
+            0.035,
+            LUDO.cellSize * 0.94,
+          );
+
+          const mesh = new THREE.Mesh(geometry, getColorMaterial(color));
+
+          mesh.position.set(position.x, 0.72, position.z);
+
+          boardGroup.add(mesh);
+        });
+      });
+
+      /*
+       * Four pointed star drawn flat on the safe squares
+       */
+
+      const starShape = new THREE.Shape();
+
+      for (let i = 0; i < 8; i++) {
+        const radius =
+          i % 2 === 0 ? LUDO.cellSize * 0.4 : LUDO.cellSize * 0.15;
+
+        const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
+
+        const x = Math.cos(angle) * radius;
+
+        const y = Math.sin(angle) * radius;
+
+        if (i === 0) {
+          starShape.moveTo(x, y);
+        } else {
+          starShape.lineTo(x, y);
+        }
+      }
+
+      starShape.closePath();
+
+      const starGeometry = new THREE.ShapeGeometry(starShape);
+
+      const starMaterial = getMaterial("#b9a06a", {
+        roughness: 0.6,
+      });
+
+      STAR_CELLS.forEach(([row, col]) => {
+        const position = cellToWorld(row, col);
+
+        const star = new THREE.Mesh(starGeometry, starMaterial);
+
+        star.rotation.x = -Math.PI / 2;
+
+        star.position.set(position.x, 0.7, position.z);
+
+        boardGroup.add(star);
+      });
+
+      /* =========================================================
+     CENTER FINISH
+  ========================================================= */
+
+      const centerGroup = new THREE.Group();
+
+      centerGroup.name = "CenterFinish";
+
+      const centerSize = 3 * LUDO.cellSize;
+
+      /*
+       * Four triangular sections.
+       *
+       * Each triangle points along the direction its
+       * home lane arrives from, so a token that finishes
+       * lands inside its own color:
+       *
+       *   red    → lane runs along row 7 from the left
+       *   green  → lane runs down column 7 from the top
+       *   yellow → lane runs along row 7 from the right
+       *   blue   → lane runs up column 7 from the bottom
+       *
+       * Shapes are built in the XY plane and rotated flat,
+       * which maps shape +y onto world -z.
+       */
+
+      const centerHalf = centerSize / 2;
+
+      function createCenterTriangle(a, b, material) {
+        const shape = new THREE.Shape();
+
+        shape.moveTo(0, 0);
+
+        shape.lineTo(a[0], a[1]);
+
+        shape.lineTo(b[0], b[1]);
+
+        shape.closePath();
+
+        const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shape), material);
+
+        mesh.rotation.x = -Math.PI / 2;
+
+        mesh.position.y = 0.05;
+
+        centerGroup.add(mesh);
+
+        return mesh;
+      }
+
+      /*
+       * green occupies -z, blue +z, red -x, yellow +x
+       */
+
+      createCenterTriangle(
+        [-centerHalf, centerHalf],
+        [centerHalf, centerHalf],
+        ludoMaterials.green,
+      );
+
+      createCenterTriangle(
+        [centerHalf, -centerHalf],
+        [-centerHalf, -centerHalf],
+        ludoMaterials.blue,
+      );
+
+      createCenterTriangle(
+        [-centerHalf, -centerHalf],
+        [-centerHalf, centerHalf],
+        ludoMaterials.red,
+      );
+
+      createCenterTriangle(
+        [centerHalf, centerHalf],
+        [centerHalf, -centerHalf],
+        ludoMaterials.yellow,
+      );
+
+      centerGroup.position.set(0, 0.76, 0);
+
+      boardGroup.add(centerGroup);
+
+      /* =========================================================
+     CENTER GOLDEN BORDER
+  ========================================================= */
+
+      const centerBorderGeometry = new THREE.BoxGeometry(
+        centerSize + 0.08,
+        0.035,
+        centerSize + 0.08,
+      );
+
+      const centerBorder = new THREE.Mesh(
+        centerBorderGeometry,
+        getMaterial("#c49b50", {
+          roughness: 0.5,
+        }),
+      );
+
+      centerBorder.position.y = 0.02;
+
+      centerGroup.add(centerBorder);
+
+      /* =========================================================
+     TOKENS
+  ========================================================= */
+
+      const tokenGeometry = new THREE.CylinderGeometry(0.21, 0.27, 0.42, 20);
+
+      const tokenTopGeometry = new THREE.SphereGeometry(
+        0.24,
+        16,
+        8,
+        0,
+        Math.PI * 2,
+        0,
+        Math.PI / 2,
+      );
+
+      function createToken(color, id) {
+        const group = new THREE.Group();
+
+        group.name = `Token-${color}-${id}`;
+
+        const material = getColorMaterial(color);
+
+        const body = new THREE.Mesh(tokenGeometry, material);
+
+        body.castShadow = true;
+        body.receiveShadow = true;
+
+        group.add(body);
+
+        const top = new THREE.Mesh(tokenTopGeometry, material);
+
+        top.position.y = 0.21;
+
+        top.castShadow = true;
+
+        group.add(top);
+
+        /*
+         * Small darker base
+         */
+
+        const baseGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.07, 20);
+
+        const base = new THREE.Mesh(
+          baseGeometry,
+          getMaterial(LUDO.colors[`${color}Dark`]),
+        );
+
+        base.position.y = -0.2;
+
+        base.castShadow = true;
+
+        group.add(base);
+
+        group.userData = {
+          id,
+          color,
+          home: true,
+          pathIndex: -1,
+        };
+
+        boardGroup.add(group);
+
+        return group;
+      }
+
+      /* =========================================================
+     TOKEN START POSITIONS
+  ========================================================= */
+
+      const tokenPositions = {
+        red: [
+          [-2.9, -2.9],
+          [-1.7, -2.9],
+          [-2.9, -1.7],
+          [-1.7, -1.7],
+        ],
+
+        green: [
+          [1.7, -2.9],
+          [2.9, -2.9],
+          [1.7, -1.7],
+          [2.9, -1.7],
+        ],
+
+        yellow: [
+          [1.7, 1.7],
+          [2.9, 1.7],
+          [1.7, 2.9],
+          [2.9, 2.9],
+        ],
+
+        blue: [
+          [-2.9, 1.7],
+          [-1.7, 1.7],
+          [-2.9, 2.9],
+          [-1.7, 2.9],
+        ],
+      };
+
+      const tokens = [];
+
+      Object.entries(tokenPositions).forEach(([color, positions]) => {
+        positions.forEach(([x, z], index) => {
+          const token = createToken(color, index + 1);
+
+          token.position.set(x, 1.18, z);
+
+          tokens.push(token);
+        });
+      });
+
+      /* =========================================================
+     TOKEN HOVER
+  ========================================================= */
+
+      const raycaster = new THREE.Raycaster();
+
+      const mouse = new THREE.Vector2();
+
+      let hoveredToken = null;
+
+      renderer.domElement.addEventListener("pointermove", (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+
+        const meshes = [];
+
+        tokens.forEach((token) => {
+          token.traverse((child) => {
+            if (child.isMesh) {
+              meshes.push(child);
+            }
+          });
+        });
+
+        const hits = raycaster.intersectObjects(meshes);
+
+        let newToken = null;
+
+        if (hits.length) {
+          let object = hits[0].object;
+
+          while (object && !object.userData?.color) {
+            object = object.parent;
+          }
+
+          newToken = object;
+        }
+
+        if (hoveredToken !== newToken) {
+          if (hoveredToken) {
+            gsap.to(hoveredToken.scale, {
+              x: 1,
+              y: 1,
+              z: 1,
+              duration: 0.2,
+            });
+          }
+
+          hoveredToken = newToken;
+
+          if (hoveredToken) {
+            gsap.to(hoveredToken.scale, {
+              x: 1.12,
+              y: 1.12,
+              z: 1.12,
+              duration: 0.2,
+              ease: "back.out(2)",
+            });
+          }
+        }
+      });
+
+      /* =========================================================
+     DICE
+  ========================================================= */
+
+      const diceGroup = new THREE.Group();
+
+      diceGroup.name = "Dice";
+
+      diceGroup.position.set(7.0, 1.2, -0.2);
+
+      scene.add(diceGroup);
+
+      /* =========================================================
+     DICE BODY
+  ========================================================= */
+
+      const diceGeometry = new THREE.BoxGeometry(1.25, 1.25, 1.25, 4, 4, 4);
+
+      const diceMaterial = getMaterial("#f4e9cb", {
+        roughness: 0.38,
+      });
+
+      const diceMesh = new THREE.Mesh(diceGeometry, diceMaterial);
+
+      diceMesh.castShadow = true;
+      diceMesh.receiveShadow = true;
+
+      diceGroup.add(diceMesh);
+
+      /* =========================================================
+     DICE PIPS
+  ========================================================= */
+
+      const pipGeometry = new THREE.SphereGeometry(0.09, 12, 8);
+
+      const pipMaterial = getMaterial("#302a22", {
+        roughness: 0.65,
+      });
+
+      const pipPositions = {
+        1: [[0, 0]],
+
+        2: [
+          [-1, -1],
+          [1, 1],
+        ],
+
+        3: [
+          [-1, -1],
+          [0, 0],
+          [1, 1],
+        ],
+
+        4: [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ],
+
+        5: [
+          [-1, -1],
+          [1, -1],
+          [0, 0],
+          [-1, 1],
+          [1, 1],
+        ],
+
+        6: [
+          [-1, -1],
+          [-1, 0],
+          [-1, 1],
+          [1, -1],
+          [1, 0],
+          [1, 1],
+        ],
+      };
+
+      function createPip(x, y, z) {
+        const pip = new THREE.Mesh(pipGeometry, pipMaterial);
+
+        pip.position.set(x, y, z);
+
+        pip.castShadow = true;
+
+        return pip;
+      }
+
+      const faceOffset = 0.632;
+
+      const pipScale = 0.27;
+
+      function createFace(number, face) {
+        const group = new THREE.Group();
+
+        const positions = pipPositions[number];
+
+        positions.forEach(([x, y]) => {
+          let px = 0;
+          let py = 0;
+          let pz = 0;
+
+          const sx = x * pipScale;
+
+          const sy = y * pipScale;
+
+          /*
+           * Front
+           */
+
+          if (face === "front") {
+            px = sx;
+            py = sy;
+            pz = faceOffset;
+          }
+
+          /*
+           * Back
+           */
+
+          if (face === "back") {
+            px = -sx;
+            py = sy;
+            pz = -faceOffset;
+          }
+
+          /*
+           * Right
+           */
+
+          if (face === "right") {
+            px = faceOffset;
+            py = sy;
+            pz = -sx;
+          }
+
+          /*
+           * Left
+           */
+
+          if (face === "left") {
+            px = -faceOffset;
+            py = sy;
+            pz = sx;
+          }
+
+          /*
+           * Top
+           */
+
+          if (face === "top") {
+            px = sx;
+            py = faceOffset;
+            pz = -sy;
+          }
+
+          /*
+           * Bottom
+           */
+
+          if (face === "bottom") {
+            px = sx;
+            py = -faceOffset;
+            pz = sy;
+          }
+
+          group.add(createPip(px, py, pz));
+        });
+
+        diceGroup.add(group);
+
+        return group;
+      }
+
+      /*
+       * Initial dice = 1
+       */
+
+      createFace(1, "front");
+
+      createFace(6, "back");
+
+      createFace(2, "right");
+
+      createFace(5, "left");
+
+      createFace(3, "top");
+
+      createFace(4, "bottom");
+
+      /* =========================================================
+     DICE VALUES / ORIENTATION
+  ========================================================= */
+
+      /*
+       * The face layout above is:
+       *
+       *   +Z = 1   -Z = 6   +X = 2
+       *   -X = 5   +Y = 3   -Y = 4
+       *
+       * The camera looks down at the board, so the value a
+       * player reads is whichever face ends up pointing at
+       * +Y. These rotations bring that face to the top.
+       */
+
+      const diceRotations = {
+        1: {
+          x: -Math.PI / 2,
+          y: 0,
+          z: 0,
+        },
+
+        2: {
+          x: 0,
+          y: 0,
+          z: Math.PI / 2,
+        },
+
+        3: {
+          x: 0,
+          y: 0,
+          z: 0,
+        },
+
+        4: {
+          x: Math.PI,
+          y: 0,
+          z: 0,
+        },
+
+        5: {
+          x: 0,
+          y: 0,
+          z: -Math.PI / 2,
+        },
+
+        6: {
+          x: Math.PI / 2,
+          y: 0,
+          z: 0,
+        },
+      };
+
+      let currentDiceValue = 1;
+
+      /*
+       * Show face 1 before the first roll
+       */
+
+      diceGroup.rotation.set(
+        diceRotations[1].x,
+        diceRotations[1].y,
+        diceRotations[1].z,
+      );
+
+      /* =========================================================
+     ROLL DICE
+  ========================================================= */
+
+      /*
+       * Nearest equivalent angle at or above `from`, so the
+       * dice always settles by spinning forwards instead of
+       * unwinding several turns backwards.
+       */
+
+      function forwardAngle(from, target) {
+        const turn = Math.PI * 2;
+
+        return target + Math.ceil((from - target) / turn) * turn;
+      }
+
+      function rollDice(forcedValue = null) {
+        const value = forcedValue ?? randomInt(1, 6);
+
+        currentDiceValue = value;
+
+        gsap.killTweensOf(diceGroup.rotation);
+
+        gsap.killTweensOf(diceGroup.position);
+
+        const target = diceRotations[value];
+
+        /*
+         * Tumble, then settle on the rolled face
+         */
+
+        const tumble = {
+          x: diceGroup.rotation.x + Math.PI * randomInt(3, 5),
+
+          y: diceGroup.rotation.y + Math.PI * randomInt(3, 5),
+
+          z: diceGroup.rotation.z + Math.PI * randomInt(2, 4),
+        };
+
+        const timeline = gsap.timeline();
+
+        timeline.to(diceGroup.position, {
+          y: 3.2,
+          duration: 0.35,
+          ease: "power2.out",
+        });
+
+        timeline.to(
+          diceGroup.rotation,
+          {
+            x: tumble.x,
+            y: tumble.y,
+            z: tumble.z,
+
+            duration: 0.9,
+
+            ease: "power2.inOut",
+          },
+          "<",
+        );
+
+        timeline.to(diceGroup.position, {
+          y: 1.2,
+          duration: 0.5,
+          ease: "bounce.out",
+        });
+
+        timeline.to(diceGroup.rotation, {
+          x: forwardAngle(tumble.x, target.x),
+          y: forwardAngle(tumble.y, target.y),
+          z: forwardAngle(tumble.z, target.z),
+
+          duration: 0.45,
+
+          ease: "back.out(1.5)",
+        });
+
+        timeline.call(() => {
+          startDiceIdle();
+
+          /*
+           * Hook for game logic
+           */
+
+          if (window.onLudoDiceRoll) {
+            window.onLudoDiceRoll(value);
+          }
+        });
+
+        return value;
+      }
+
+      /* =========================================================
+     DICE CLICK
+  ========================================================= */
+
+      const diceRaycaster = new THREE.Raycaster();
+
+      renderer.domElement.addEventListener("click", (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        diceRaycaster.setFromCamera(mouse, camera);
+
+        const hits = diceRaycaster.intersectObject(diceMesh);
+
+        if (hits.length) {
+          requestRoll();
+        }
+      });
+
+      /* =========================================================
+     DICE HOVER
+  ========================================================= */
+
+      let diceHovered = false;
+
+      renderer.domElement.addEventListener("pointermove", (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        diceRaycaster.setFromCamera(mouse, camera);
+
+        const hits = diceRaycaster.intersectObject(diceMesh);
+
+        const isHover = hits.length > 0;
+
+        if (isHover !== diceHovered) {
+          diceHovered = isHover;
+
+          gsap.to(diceGroup.scale, {
+            x: isHover ? 1.08 : 1,
+            y: isHover ? 1.08 : 1,
+            z: isHover ? 1.08 : 1,
+
+            duration: 0.2,
+
+            ease: "power2.out",
+          });
+
+          renderer.domElement.style.cursor = isHover ? "pointer" : "default";
+        }
+      });
+
+      /* =========================================================
+     TURN INDICATOR UNDER THE DICE
+  ========================================================= */
+
+      const turnDiscMaterial = new THREE.MeshStandardMaterial({
+        color: LUDO.colors.red,
+        roughness: 0.55,
+      });
+
+      const turnDisc = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.9, 0.9, 0.05, 32),
+        turnDiscMaterial,
+      );
+
+      turnDisc.position.set(
+        diceGroup.position.x,
+        0.03,
+        diceGroup.position.z,
+      );
+
+      turnDisc.receiveShadow = true;
+
+      scene.add(turnDisc);
+
+      /* =========================================================
+     DICE IDLE ANIMATION
+  ========================================================= */
+
+      function startDiceIdle() {
+        gsap.killTweensOf(diceGroup.position);
+
+        gsap.to(diceGroup.position, {
+          y: 1.35,
+
+          duration: 2.2,
+
+          repeat: -1,
+
+          yoyo: true,
+
+          ease: "sine.inOut",
+        });
+      }
+
+      startDiceIdle();
+
+      /* =========================================================
+     BOARD IDLE FLOAT
+  ========================================================= */
+
+      gsap.to(boardGroup.position, {
+        y: 0.04,
+
+        duration: 3,
+
+        repeat: -1,
+
+        yoyo: true,
+
+        ease: "sine.inOut",
+      });
+
+      /* =========================================================
+     FLOATING PARTICLES
+  ========================================================= */
+
+      const particleCount = isMobile ? 40 : 90;
+
+      const particleGeometry = new THREE.BufferGeometry();
+
+      const particlePositions = new Float32Array(particleCount * 3);
+
+      for (let i = 0; i < particleCount; i++) {
+        particlePositions[i * 3] = random(-25, 25);
+
+        particlePositions[i * 3 + 1] = random(1, 12);
+
+        particlePositions[i * 3 + 2] = random(-25, 25);
+      }
+
+      particleGeometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(particlePositions, 3),
+      );
+
+      const particleMaterial = new THREE.PointsMaterial({
+        color: "#d7dfbd",
+        size: 0.045,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false,
+      });
+
+      const particles = new THREE.Points(particleGeometry, particleMaterial);
+
+      scene.add(particles);
+
+      /* =========================================================
+     ENVIRONMENT ANIMATION
+  ========================================================= */
+
+      const clock = new THREE.Clock();
+
+      function animateForest() {
+        const time = clock.getElapsedTime();
+
+        forest.traverse((object) => {
+          if (object.userData && object.userData.swayAmount) {
+            const data = object.userData;
+
+            const sway =
+              Math.sin(time * data.swaySpeed + data.phase) * data.swayAmount;
+
+            object.rotation.z = sway;
+          }
+        });
+
+        particles.rotation.y = time * 0.008;
+
+        particles.position.x = Math.sin(time * 0.12) * 0.5;
+
+        particles.position.z = Math.cos(time * 0.09) * 0.4;
+      }
+
+      /* =========================================================
+     GSAP CAMERA
+  ========================================================= */
+
+      /*
+       * The orbit rig below rebuilds camera.position every
+       * frame, so nothing may write to it directly — a tween
+       * on camera.position is overwritten before it is ever
+       * drawn. Framing changes go through the rig instead:
+       * cameraTarget is the point orbited around, and
+       * cameraOrbit.distance is how far out the camera sits.
+       */
+
+      const cameraTarget = new THREE.Vector3(0, 0, 0);
+
+      const cameraOrbit = {
+        distance: 27,
+        height: 14,
+      };
+
+      const DEFAULT_ORBIT_DISTANCE = 27;
+
+      function focusCameraOn(target, distance = 13) {
+        gsap.to(cameraTarget, {
+          x: target.x,
+          y: 0,
+          z: target.z,
+          duration: 1.1,
+          ease: "power3.inOut",
+        });
+
+        gsap.to(cameraOrbit, {
+          distance,
+          duration: 1.1,
+          ease: "power3.inOut",
+        });
+      }
+
+      function resetCamera() {
+        gsap.to(cameraTarget, {
+          x: 0,
+          y: 0,
+          z: 0,
+          duration: 1.2,
+          ease: "power3.inOut",
+        });
+
+        gsap.to(cameraOrbit, {
+          distance: DEFAULT_ORBIT_DISTANCE,
+          duration: 1.2,
+          ease: "power3.inOut",
+        });
+      }
+
+      /* =========================================================
+     DEMO GAME EVENTS
+  ========================================================= */
+
+      function animateTokenMovement(token, positions) {
+        const timeline = gsap.timeline();
+
+        positions.forEach((position) => {
+          timeline.to(token.position, {
+            x: position.x,
+            z: position.z,
+            duration: 0.35,
+            ease: "power2.inOut",
+          });
+
+          timeline.to(
+            token.position,
+            {
+              y: 1.5,
+              duration: 0.17,
+              ease: "power2.out",
+            },
+            "<",
+          );
+
+          timeline.to(token.position, {
+            y: 1.15,
+            duration: 0.18,
+            ease: "bounce.out",
+          });
+        });
+
+        return timeline;
+      }
+
+      function demoTokenMove() {
+        const token = tokens[0];
+
+        focusCameraOn(token.position.clone(), 10);
+
+        const start = token.position.clone();
+
+        const path = [
+          {
+            x: start.x + 1,
+            z: start.z,
+          },
+          {
+            x: start.x + 1.8,
+            z: start.z,
+          },
+          {
+            x: start.x + 1.8,
+            z: start.z + 1,
+          },
+          {
+            x: start.x + 1.8,
+            z: start.z + 1.8,
+          },
+        ];
+
+        animateTokenMovement(token, path).then?.();
+
+        setTimeout(resetCamera, 2500);
+      }
+
+      /* =========================================================
+     MOUSE ORBIT
+  ========================================================= */
+
+      let isDragging = false;
+
+      let previousMouseX = 0;
+      let previousMouseY = 0;
+
+      let targetRotationX = 0;
+      let targetRotationY = 0;
+
+      let currentRotationX = 0;
+      let currentRotationY = 0;
+
+      renderer.domElement.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+
+        previousMouseX = event.clientX;
+
+        previousMouseY = event.clientY;
+
+        renderer.domElement.setPointerCapture(event.pointerId);
+      });
+
+      renderer.domElement.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+
+        const deltaX = event.clientX - previousMouseX;
+
+        const deltaY = event.clientY - previousMouseY;
+
+        previousMouseX = event.clientX;
+
+        previousMouseY = event.clientY;
+
+        targetRotationY += deltaX * 0.004;
+
+        targetRotationX += deltaY * 0.002;
+
+        targetRotationX = THREE.MathUtils.clamp(targetRotationX, -0.25, 0.35);
+      });
+
+      renderer.domElement.addEventListener("pointerup", (event) => {
+        isDragging = false;
+
+        renderer.domElement.releasePointerCapture(event.pointerId);
+      });
+
+      /* =========================================================
+     ZOOM
+  ========================================================= */
+
+      renderer.domElement.addEventListener(
+        "wheel",
+        (event) => {
+          event.preventDefault();
+
+          gsap.killTweensOf(cameraOrbit);
+
+          cameraOrbit.distance = THREE.MathUtils.clamp(
+            cameraOrbit.distance + event.deltaY * 0.01,
+            16,
+            35,
+          );
+        },
+        {
+          passive: false,
+        },
+      );
+
+      /* =========================================================
+     CAMERA ORBIT UPDATE
+  ========================================================= */
+
+      function updateCamera() {
+        if (!isDragging) {
+          targetRotationY *= 0.995;
+          targetRotationX *= 0.995;
+        }
+
+        currentRotationY += (targetRotationY - currentRotationY) * 0.04;
+
+        currentRotationX += (targetRotationX - currentRotationX) * 0.04;
+
+        const horizontalDistance =
+          cameraOrbit.distance * Math.cos(currentRotationX);
+
+        camera.position.x =
+          cameraTarget.x + Math.sin(currentRotationY) * horizontalDistance;
+
+        camera.position.z =
+          cameraTarget.z + Math.cos(currentRotationY) * horizontalDistance;
+
+        camera.position.y =
+          cameraOrbit.height +
+          Math.sin(currentRotationX) * cameraOrbit.distance;
+
+        camera.lookAt(cameraTarget);
+      }
+
+      /* =========================================================
+     RESIZE
+  ========================================================= */
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        renderer.setPixelRatio(
+          Math.min(
+            window.devicePixelRatio,
+            window.innerWidth < 768 ? 1.25 : 1.75,
+          ),
+        );
+      });
+
+      /* =========================================================
+     RENDER LOOP
+  ========================================================= */
+
+      function render() {
+        requestAnimationFrame(render);
+
+        animateForest();
+
+        updateCamera();
+
+        renderer.render(scene, camera);
+      }
+
+      render();
+
+      /* =========================================================
+     OPTIONAL GLOBAL GAME API
+  ========================================================= */
+
+      window.LudoForest = {
+        focusCameraOn,
+
+        resetCamera,
+
+        animateTokenMovement,
+
+        demoTokenMove,
+
+        scene,
+
+        camera,
+
+        renderer,
+
+        board: boardGroup,
+
+        forest,
+
+        tokens,
+      };
+
+      /* =========================================================
+     LUDO RULES ENGINE
+  ========================================================= */
+
+      /*
+        A token's position is stored as one number, counted
+        from that player's own start square:
+
+            -1        waiting in the yard
+             0 .. 50  the shared ring
+            51 .. 56  its own home lane
+            56        home
+
+        The ring is 52 cells long, but a token only walks 51
+        of them: every player reaches its home lane entrance
+        at relative step 50 and turns inward there. Storing
+        positions per player is what lets four players share
+        one ring while each finishes in its own lane.
+
+        Rules implemented:
+
+          - a 6 is needed to bring a token out of the yard
+          - a 6 earns another roll, but three in a row
+            forfeits the turn
+          - capturing an opponent earns another roll
+          - bringing a token home earns another roll
+          - the eight starred squares are safe from capture
+          - two tokens of one color form a block that
+            opponents can neither pass nor land on
+          - a token must reach home on an exact roll
+          - if a legal move exists the player must take it
+          - first player to bring all four tokens home wins
+      */
+
+      const RING_LENGTH = 52;
+
+      const TRACK_STEPS = 51;
+
+      const LAST_RING_STEP = TRACK_STEPS - 1;
+
+      const HOME_LANE_LENGTH = 6;
+
+      const FINISH_POSITION = TRACK_STEPS + HOME_LANE_LENGTH - 1;
+
+      const TOKEN_HEIGHT = 1.18;
+
+      const STACK_RADIUS = 0.15;
+
+      const LUDO_GAME = {
+        TOKENS_TO_WIN: 4,
+
+        players: [
+          {
+            color: "red",
+            startIndex: 0,
+          },
+
+          {
+            color: "green",
+            startIndex: 13,
+          },
+
+          {
+            color: "yellow",
+            startIndex: 26,
+          },
+
+          {
+            color: "blue",
+            startIndex: 39,
+          },
+        ],
+
+        currentPlayer: 0,
+
+        diceValue: null,
+
+        /*
+         * true while a token is waiting to be picked
+         */
+        awaitingToken: false,
+
+        /*
+         * true while an animation owns the board
+         */
+        busy: false,
+
+        sixCount: 0,
+
+        gameStarted: false,
+
+        gameOver: false,
+
+        winner: null,
+      };
+
+      /* =========================================================
+     THE SHARED RING
+  ========================================================= */
+
+      /*
+       * Clockwise from red's start square. Each entry is a
+       * [row, col] cell on the 15 x 15 grid.
+       */
+
+      const COMMON_TRACK = [
+        // red side
+
+        [6, 1],
+        [6, 2],
+        [6, 3],
+        [6, 4],
+        [6, 5],
+
+        [5, 6],
+        [4, 6],
+        [3, 6],
+        [2, 6],
+        [1, 6],
+
+        [0, 6],
+        [0, 7],
+        [0, 8],
+
+        // green side
+
+        [1, 8],
+        [2, 8],
+        [3, 8],
+        [4, 8],
+        [5, 8],
+
+        [6, 9],
+        [6, 10],
+        [6, 11],
+        [6, 12],
+        [6, 13],
+
+        [6, 14],
+        [7, 14],
+        [8, 14],
+
+        // yellow side
+
+        [8, 13],
+        [8, 12],
+        [8, 11],
+        [8, 10],
+        [8, 9],
+
+        [9, 8],
+        [10, 8],
+        [11, 8],
+        [12, 8],
+        [13, 8],
+
+        [14, 8],
+        [14, 7],
+        [14, 6],
+
+        // blue side
+
+        [13, 6],
+        [12, 6],
+        [11, 6],
+        [10, 6],
+        [9, 6],
+
+        [8, 5],
+        [8, 4],
+        [8, 3],
+        [8, 2],
+        [8, 1],
+
+        [8, 0],
+        [7, 0],
+        [6, 0],
+      ];
+
+      /* =========================================================
+     HOME LANES
+  ========================================================= */
+
+      /*
+       * Six cells each. The last one sits inside the center
+       * triangle, which is where a finished token rests.
+       */
+
+      const HOME_LANES = {
+        red: [
+          [7, 1],
+          [7, 2],
+          [7, 3],
+          [7, 4],
+          [7, 5],
+          [7, 6],
+        ],
+
+        green: [
+          [1, 7],
+          [2, 7],
+          [3, 7],
+          [4, 7],
+          [5, 7],
+          [6, 7],
+        ],
+
+        yellow: [
+          [7, 13],
+          [7, 12],
+          [7, 11],
+          [7, 10],
+          [7, 9],
+          [7, 8],
+        ],
+
+        blue: [
+          [13, 7],
+          [12, 7],
+          [11, 7],
+          [10, 7],
+          [9, 7],
+          [8, 7],
+        ],
+      };
+
+      /* =========================================================
+     SAFE SQUARES
+  ========================================================= */
+
+      /*
+       * The four start squares plus the four starred squares
+       * eight steps further on. These match STAR_CELLS and the
+       * colored start squares painted on the board above.
+       */
+
+      const SAFE_TRACK_INDEXES = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+
+      /* =========================================================
+     HELPERS
+  ========================================================= */
+
+      function getPlayer(color) {
+        return LUDO_GAME.players.find((player) => player.color === color);
+      }
+
+      function currentPlayer() {
+        return LUDO_GAME.players[LUDO_GAME.currentPlayer];
+      }
+
+      function labelFor(color) {
+        return color.charAt(0).toUpperCase() + color.slice(1);
+      }
+
+      /*
+       * Which ring cell a token stands on. Only meaningful
+       * while the token is on the ring.
+       */
+
+      function ringIndexOf(token) {
+        const player = getPlayer(token.userData.color);
+
+        return (
+          (player.startIndex + token.userData.state.relativePosition) %
+          RING_LENGTH
+        );
+      }
+
+      function isOnRing(token) {
+        const position = token.userData.state.relativePosition;
+
+        return position >= 0 && position <= LAST_RING_STEP;
+      }
+
+      /* =========================================================
+     BLOCKS
+  ========================================================= */
+
+      /*
+       * Ring cell -> how many tokens of each color stand there.
+       */
+
+      function buildRingOccupancy() {
+        const occupancy = new Map();
+
+        tokens.forEach((token) => {
+          if (!isOnRing(token)) {
+            return;
+          }
+
+          const index = ringIndexOf(token);
+
+          let counts = occupancy.get(index);
+
+          if (!counts) {
+            counts = {};
+
+            occupancy.set(index, counts);
+          }
+
+          const color = token.userData.color;
+
+          counts[color] = (counts[color] || 0) + 1;
+        });
+
+        return occupancy;
+      }
+
+      /*
+       * Two tokens of one color block everyone else. A player
+       * is never blocked by its own tokens.
+       */
+
+      function isBlockedFor(occupancy, ringIndex, color) {
+        const counts = occupancy.get(ringIndex);
+
+        if (!counts) {
+          return false;
+        }
+
+        return Object.keys(counts).some(
+          (other) => other !== color && counts[other] >= 2,
+        );
+      }
+
+      function pathIsClear(token, from, to, occupancy) {
+        const player = getPlayer(token.userData.color);
+
+        for (let step = from + 1; step <= to; step++) {
+          /*
+           * Home lanes are private, so nothing can block there
+           */
+
+          if (step > LAST_RING_STEP) {
+            break;
+          }
+
+          const index = (player.startIndex + step) % RING_LENGTH;
+
+          if (isBlockedFor(occupancy, index, token.userData.color)) {
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      /* =========================================================
+     LEGAL MOVES
+  ========================================================= */
+
+      function canTokenMove(token, dice, occupancy) {
+        if (!dice) {
+          return false;
+        }
+
+        const state = token.userData.state;
+
+        if (state.finished) {
+          return false;
+        }
+
+        /*
+         * Leaving the yard needs a 6, and an opponent block
+         * sitting on the start square still refuses entry.
+         */
+
+        if (state.relativePosition === -1) {
+          if (dice !== 6) {
+            return false;
+          }
+
+          const startIndex = getPlayer(token.userData.color).startIndex;
+
+          return !isBlockedFor(occupancy, startIndex, token.userData.color);
+        }
+
+        /*
+         * Home has to be reached exactly
+         */
+
+        const destination = state.relativePosition + dice;
+
+        if (destination > FINISH_POSITION) {
+          return false;
+        }
+
+        return pathIsClear(token, state.relativePosition, destination, occupancy);
+      }
+
+      function getValidTokens() {
+        const player = currentPlayer();
+
+        const occupancy = buildRingOccupancy();
+
+        return tokens.filter(
+          (token) =>
+            token.userData.color === player.color &&
+            canTokenMove(token, LUDO_GAME.diceValue, occupancy),
+        );
+      }
+
+      /* =========================================================
+     PLACEMENT
+  ========================================================= */
+
+      function getTokenBasePosition(token) {
+        const state = token.userData.state;
+
+        const color = token.userData.color;
+
+        if (state.relativePosition === -1) {
+          const slot = tokenPositions[color][state.homeIndex];
+
+          return {
+            x: slot[0],
+            z: slot[1],
+          };
+        }
+
+        if (state.relativePosition > LAST_RING_STEP) {
+          const lane = HOME_LANES[color][state.relativePosition - TRACK_STEPS];
+
+          return cellToWorld(lane[0], lane[1]);
+        }
+
+        const cell = COMMON_TRACK[ringIndexOf(token)];
+
+        return cellToWorld(cell[0], cell[1]);
+      }
+
+      /*
+       * Tokens sharing a square are spread around a small
+       * circle so a stack stays countable.
+       */
+
+      function cellKeyFor(token) {
+        const state = token.userData.state;
+
+        if (state.relativePosition === -1) {
+          return `yard:${token.userData.color}:${state.homeIndex}`;
+        }
+
+        if (state.relativePosition > LAST_RING_STEP) {
+          return `lane:${token.userData.color}:${
+            state.relativePosition - TRACK_STEPS
+          }`;
+        }
+
+        return `ring:${ringIndexOf(token)}`;
+      }
+
+      function placeToken(token, groupSize, groupIndex, animate) {
+        const base = getTokenBasePosition(token);
+
+        let offsetX = 0;
+
+        let offsetZ = 0;
+
+        if (groupSize > 1) {
+          const angle = (groupIndex / groupSize) * Math.PI * 2 - Math.PI / 2;
+
+          offsetX = Math.cos(angle) * STACK_RADIUS;
+
+          offsetZ = Math.sin(angle) * STACK_RADIUS;
+        }
+
+        const x = base.x + offsetX;
+
+        const z = base.z + offsetZ;
+
+        if (!animate) {
+          token.position.set(x, TOKEN_HEIGHT, z);
+
+          return;
+        }
+
+        gsap.to(token.position, {
+          x,
+          z,
+
+          duration: 0.22,
+
+          ease: "power2.inOut",
+        });
+      }
+
+      /*
+       * Tokens that are mid-animation own their own position
+       * and are left alone.
+       */
+
+      function refreshTokenPlacements(animate = false) {
+        const groups = new Map();
+
+        tokens.forEach((token) => {
+          const key = cellKeyFor(token);
+
+          if (!groups.has(key)) {
+            groups.set(key, []);
+          }
+
+          groups.get(key).push(token);
+        });
+
+        groups.forEach((group) => {
+          group.forEach((token, index) => {
+            if (token.userData.animating) {
+              return;
+            }
+
+            placeToken(token, group.length, index, animate);
+          });
+        });
+      }
+
+      /* =========================================================
+     HIGHLIGHT
+  ========================================================= */
+
+      /*
+       * A ring under the token rather than a scale pulse, so
+       * this never fights the hover effect.
+       */
+
+      const highlightGeometry = new THREE.TorusGeometry(0.36, 0.05, 8, 26);
+
+      const highlightMaterial = new THREE.MeshStandardMaterial({
+        color: "#fff6cf",
+        emissive: "#e8c766",
+        emissiveIntensity: 1.4,
+        roughness: 0.4,
+      });
+
+      function getHighlightRing(token) {
+        if (token.userData.highlightRing) {
+          return token.userData.highlightRing;
+        }
+
+        const ring = new THREE.Mesh(highlightGeometry, highlightMaterial);
+
+        ring.rotation.x = -Math.PI / 2;
+
+        ring.position.y = -0.235;
+
+        ring.visible = false;
+
+        token.add(ring);
+
+        token.userData.highlightRing = ring;
+
+        return ring;
+      }
+
+      function highlightToken(token) {
+        const ring = getHighlightRing(token);
+
+        ring.visible = true;
+
+        gsap.killTweensOf(ring.scale);
+
+        ring.scale.set(1, 1, 1);
+
+        gsap.to(ring.scale, {
+          x: 1.2,
+          y: 1.2,
+          z: 1.2,
+
+          duration: 0.6,
+
+          repeat: -1,
+
+          yoyo: true,
+
+          ease: "sine.inOut",
+        });
+
+        token.userData.highlighted = true;
+      }
+
+      function removeTokenHighlight(token) {
+        const ring = token.userData.highlightRing;
+
+        if (!ring) {
+          return;
+        }
+
+        gsap.killTweensOf(ring.scale);
+
+        ring.scale.set(1, 1, 1);
+
+        ring.visible = false;
+
+        token.userData.highlighted = false;
+      }
+
+      function clearTokenHighlights() {
+        tokens.forEach(removeTokenHighlight);
+      }
+
+      /* =========================================================
+     MOVEMENT
+  ========================================================= */
+
+      function enterToken(token, onComplete) {
+        const state = token.userData.state;
+
+        state.relativePosition = 0;
+
+        state.status = "ring";
+
+        const base = getTokenBasePosition(token);
+
+        token.userData.animating = true;
+
+        gsap.killTweensOf(token.position);
+
+        gsap
+          .timeline()
+
+          .to(token.position, {
+            y: 2.1,
+
+            duration: 0.22,
+
+            ease: "power2.out",
+          })
+
+          .to(token.position, {
+            x: base.x,
+            z: base.z,
+
+            duration: 0.4,
+
+            ease: "power2.inOut",
+          })
+
+          .to(token.position, {
+            y: TOKEN_HEIGHT,
+
+            duration: 0.42,
+
+            ease: "bounce.out",
+          })
+
+          .call(() => {
+            token.userData.animating = false;
+
+            onComplete();
+          });
+      }
+
+      /*
+       * One hop per square, so a move is readable as a count.
+       */
+
+      function animateTokenPath(token, from, to, onComplete) {
+        const timeline = gsap.timeline();
+
+        token.userData.animating = true;
+
+        for (let step = from + 1; step <= to; step++) {
+          token.userData.state.relativePosition = step;
+
+          const target = getTokenBasePosition(token);
+
+          timeline.to(token.position, {
+            x: target.x,
+            z: target.z,
+
+            duration: 0.2,
+
+            ease: "power1.inOut",
+          });
+
+          timeline.to(
+            token.position,
+            {
+              y: 1.52,
+
+              duration: 0.1,
+
+              ease: "power2.out",
+            },
+            "<",
+          );
+
+          timeline.to(token.position, {
+            y: TOKEN_HEIGHT,
+
+            duration: 0.1,
+
+            ease: "bounce.out",
+          });
+        }
+
+        timeline.call(() => {
+          token.userData.animating = false;
+
+          onComplete();
+        });
+
+        return timeline;
+      }
+
+      /* =========================================================
+     CAPTURE
+  ========================================================= */
+
+      function sendTokenHome(token) {
+        const state = token.userData.state;
+
+        state.status = "yard";
+
+        state.relativePosition = -1;
+
+        state.trackIndex = null;
+
+        state.finished = false;
+
+        const slot = tokenPositions[token.userData.color][state.homeIndex];
+
+        token.userData.animating = true;
+
+        gsap.killTweensOf(token.position);
+
+        gsap
+          .timeline()
+
+          .to(token.position, {
+            y: 2.1,
+
+            duration: 0.2,
+
+            ease: "power2.out",
+          })
+
+          .to(token.position, {
+            x: slot[0],
+            z: slot[1],
+
+            duration: 0.5,
+
+            ease: "power2.inOut",
+          })
+
+          .to(token.position, {
+            y: TOKEN_HEIGHT,
+
+            duration: 0.3,
+
+            ease: "bounce.out",
+          })
+
+          .call(() => {
+            token.userData.animating = false;
+
+            refreshTokenPlacements();
+          });
+      }
+
+      /*
+       * Only tokens standing on the ring can be taken, which
+       * is what keeps a token safe once it turns into its
+       * own home lane.
+       */
+
+      function captureOpponentsAt(movingToken) {
+        if (!isOnRing(movingToken)) {
+          return [];
+        }
+
+        const index = ringIndexOf(movingToken);
+
+        if (SAFE_TRACK_INDEXES.has(index)) {
+          return [];
+        }
+
+        const captured = tokens.filter((other) => {
+          if (other === movingToken) {
+            return false;
+          }
+
+          if (other.userData.color === movingToken.userData.color) {
+            return false;
+          }
+
+          if (!isOnRing(other)) {
+            return false;
+          }
+
+          return ringIndexOf(other) === index;
+        });
+
+        captured.forEach(sendTokenHome);
+
+        return captured;
+      }
+
+      /* =========================================================
+     HUD
+  ========================================================= */
+
+      const turnDot = document.getElementById("turnDot");
+
+      const turnName = document.getElementById("turnName");
+
+      const turnMessage = document.getElementById("turnMessage");
+
+      const rollButton = document.getElementById("rollButton");
+
+      const diceReadout = document.getElementById("diceReadout");
+
+      const scorePanel = document.getElementById("scorePanel");
+
+      const winOverlay = document.getElementById("winOverlay");
+
+      const winTitle = document.getElementById("winTitle");
+
+      const restartButton = document.getElementById("restartButton");
+
+      const scoreRows = {};
+
+      LUDO_GAME.players.forEach((player) => {
+        const row = document.createElement("div");
+
+        row.className = "score-row";
+
+        const swatch = document.createElement("span");
+
+        swatch.className = "score-swatch";
+
+        swatch.style.background = LUDO.colors[player.color];
+
+        const name = document.createElement("span");
+
+        name.className = "score-name";
+
+        name.textContent = labelFor(player.color);
+
+        const count = document.createElement("span");
+
+        count.className = "score-count";
+
+        count.textContent = "0/4";
+
+        row.append(swatch, name, count);
+
+        scorePanel.appendChild(row);
+
+        scoreRows[player.color] = {
+          row,
+          count,
+        };
+      });
+
+      function tokensHome(color) {
+        return tokens.filter(
+          (token) =>
+            token.userData.color === color && token.userData.state.finished,
+        ).length;
+      }
+
+      function setMessage(text) {
+        turnMessage.textContent = text;
+      }
+
+      function updateHud() {
+        const player = currentPlayer();
+
+        turnDot.style.background = LUDO.colors[
+          LUDO_GAME.gameOver ? LUDO_GAME.winner : player.color
+        ];
+
+        turnName.textContent = LUDO_GAME.gameOver
+          ? `${labelFor(LUDO_GAME.winner)} wins`
+          : labelFor(player.color);
+
+        rollButton.disabled = !canRoll();
+
+        diceReadout.textContent = LUDO_GAME.diceValue
+          ? `Dice ${LUDO_GAME.diceValue}`
+          : "Dice —";
+
+        turnDiscMaterial.color.set(LUDO.colors[player.color]);
+
+        LUDO_GAME.players.forEach((entry) => {
+          scoreRows[entry.color].count.textContent = `${tokensHome(
+            entry.color,
+          )}/4`;
+
+          scoreRows[entry.color].row.classList.toggle(
+            "active",
+            !LUDO_GAME.gameOver && entry.color === player.color,
+          );
+        });
+      }
+
+      /* =========================================================
+     TURN FLOW
+  ========================================================= */
+
+      function canRoll() {
+        return (
+          LUDO_GAME.gameStarted &&
+          !LUDO_GAME.gameOver &&
+          !LUDO_GAME.busy &&
+          !LUDO_GAME.awaitingToken
+        );
+      }
+
+      function requestRoll() {
+        if (!canRoll()) {
+          return;
+        }
+
+        LUDO_GAME.busy = true;
+
+        LUDO_GAME.diceValue = null;
+
+        setMessage("Rolling…");
+
+        updateHud();
+
+        rollDice();
+      }
+
+      window.onLudoDiceRoll = function (value) {
+        LUDO_GAME.diceValue = value;
+
+        const name = labelFor(currentPlayer().color);
+
+        /*
+         * Three sixes in a row hands the turn over
+         */
+
+        if (value === 6) {
+          LUDO_GAME.sixCount += 1;
+
+          if (LUDO_GAME.sixCount >= 3) {
+            setMessage(`${name} rolled three sixes — turn forfeited.`);
+
+            updateHud();
+
+            window.setTimeout(nextPlayer, 1300);
+
+            return;
+          }
+        } else {
+          LUDO_GAME.sixCount = 0;
+        }
+
+        const validTokens = getValidTokens();
+
+        if (validTokens.length === 0) {
+          if (value === 6) {
+            /*
+             * A 6 still earns another roll
+             */
+
+            LUDO_GAME.busy = false;
+
+            setMessage(`${name} rolled a 6 but has no legal move. Roll again.`);
+
+            updateHud();
+
+            return;
+          }
+
+          setMessage(`${name} rolled ${value} — no legal move.`);
+
+          updateHud();
+
+          window.setTimeout(nextPlayer, 1200);
+
+          return;
+        }
+
+        LUDO_GAME.awaitingToken = true;
+
+        LUDO_GAME.busy = false;
+
+        validTokens.forEach(highlightToken);
+
+        /*
+         * With a single legal move there is nothing to decide
+         */
+
+        if (validTokens.length === 1) {
+          setMessage(`${name} rolled ${value} — only one move available.`);
+
+          updateHud();
+
+          window.setTimeout(() => {
+            if (LUDO_GAME.awaitingToken) {
+              moveSelectedToken(validTokens[0]);
+            }
+          }, 600);
+
+          return;
+        }
+
+        setMessage(`${name} rolled ${value} — pick a token.`);
+
+        updateHud();
+      };
+
+      function moveSelectedToken(token) {
+        if (!LUDO_GAME.awaitingToken) {
+          return;
+        }
+
+        const dice = LUDO_GAME.diceValue;
+
+        if (!canTokenMove(token, dice, buildRingOccupancy())) {
+          return;
+        }
+
+        clearTokenHighlights();
+
+        LUDO_GAME.awaitingToken = false;
+
+        LUDO_GAME.busy = true;
+
+        updateHud();
+
+        const state = token.userData.state;
+
+        if (state.relativePosition === -1) {
+          enterToken(token, () => resolveMove(token, dice));
+
+          return;
+        }
+
+        animateTokenPath(
+          token,
+          state.relativePosition,
+          state.relativePosition + dice,
+          () => resolveMove(token, dice),
+        );
+      }
+
+      /*
+       * Runs once the moving token has settled: works out what
+       * the move earned and who plays next.
+       */
+
+      function resolveMove(token, dice) {
+        const state = token.userData.state;
+
+        state.status =
+          state.relativePosition > LAST_RING_STEP ? "home-lane" : "ring";
+
+        state.finished = state.relativePosition === FINISH_POSITION;
+
+        const captured = captureOpponentsAt(token);
+
+        refreshTokenPlacements(true);
+
+        const player = currentPlayer();
+
+        const name = labelFor(player.color);
+
+        const events = [];
+
+        if (captured.length > 0) {
+          events.push(
+            `${name} knocked ${labelFor(
+              captured[0].userData.color,
+            )} back to the yard`,
+          );
+        }
+
+        if (state.finished) {
+          events.push(`${name} brought a token home`);
+        }
+
+        if (checkPlayerWin(player.color)) {
+          return;
+        }
+
+        const extraTurn = dice === 6 || captured.length > 0 || state.finished;
+
+        if (extraTurn) {
+          events.push("roll again");
+        }
+
+        if (events.length > 0) {
+          setMessage(`${events.join(" — ")}.`);
+        }
+
+        endTurn(extraTurn);
+      }
+
+      function endTurn(extraTurn) {
+        LUDO_GAME.awaitingToken = false;
+
+        clearTokenHighlights();
+
+        if (LUDO_GAME.gameOver) {
+          LUDO_GAME.busy = false;
+
+          updateHud();
+
+          return;
+        }
+
+        if (extraTurn) {
+          LUDO_GAME.diceValue = null;
+
+          LUDO_GAME.busy = false;
+
+          updateHud();
+
+          return;
+        }
+
+        /*
+         * Short pause so the move can be read before the
+         * turn changes hands
+         */
+
+        window.setTimeout(nextPlayer, 700);
+      }
+
+      function nextPlayer() {
+        clearTokenHighlights();
+
+        LUDO_GAME.diceValue = null;
+
+        LUDO_GAME.awaitingToken = false;
+
+        LUDO_GAME.sixCount = 0;
+
+        LUDO_GAME.busy = false;
+
+        LUDO_GAME.currentPlayer =
+          (LUDO_GAME.currentPlayer + 1) % LUDO_GAME.players.length;
+
+        const player = currentPlayer();
+
+        setMessage(`${labelFor(player.color)} to roll.`);
+
+        updateHud();
+
+        if (window.onLudoTurnChange) {
+          window.onLudoTurnChange(player.color);
+        }
+      }
+
+      /* =========================================================
+     WIN
+  ========================================================= */
+
+      function checkPlayerWin(color) {
+        if (tokensHome(color) < LUDO_GAME.TOKENS_TO_WIN) {
+          return false;
+        }
+
+        LUDO_GAME.gameOver = true;
+
+        LUDO_GAME.winner = color;
+
+        LUDO_GAME.busy = false;
+
+        LUDO_GAME.awaitingToken = false;
+
+        LUDO_GAME.diceValue = null;
+
+        clearTokenHighlights();
+
+        setMessage(`${labelFor(color)} has all four tokens home.`);
+
+        updateHud();
+
+        winTitle.textContent = `${labelFor(color)} wins`;
+
+        winOverlay.classList.add("show");
+
+        if (window.onLudoWin) {
+          window.onLudoWin(color);
+        }
+
+        return true;
+      }
+
+      /* =========================================================
+     TOKEN CLICK
+  ========================================================= */
+
+      function selectToken(token) {
+        if (!LUDO_GAME.awaitingToken) {
+          return;
+        }
+
+        if (token.userData.color !== currentPlayer().color) {
+          return;
+        }
+
+        moveSelectedToken(token);
+      }
+
+      renderer.domElement.addEventListener("click", (event) => {
+        if (!LUDO_GAME.awaitingToken) {
+          return;
+        }
+
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+
+        const meshes = [];
+
+        tokens.forEach((token) => {
+          token.traverse((child) => {
+            if (child.isMesh) {
+              meshes.push(child);
+            }
+          });
+        });
+
+        const hits = raycaster.intersectObjects(meshes);
+
+        if (!hits.length) {
+          return;
+        }
+
+        let selected = hits[0].object;
+
+        while (selected && !selected.userData?.color) {
+          selected = selected.parent;
+        }
+
+        if (selected) {
+          selectToken(selected);
+        }
+      });
+
+      /* =========================================================
+     START / RESTART
+  ========================================================= */
+
+      function startLudoGame() {
+        LUDO_GAME.gameStarted = true;
+
+        LUDO_GAME.gameOver = false;
+
+        LUDO_GAME.winner = null;
+
+        LUDO_GAME.currentPlayer = 0;
+
+        LUDO_GAME.diceValue = null;
+
+        LUDO_GAME.awaitingToken = false;
+
+        LUDO_GAME.busy = false;
+
+        LUDO_GAME.sixCount = 0;
+
+        clearTokenHighlights();
+
+        tokens.forEach((token) => {
+          gsap.killTweensOf(token.position);
+
+          token.userData.animating = false;
+
+          token.userData.state = {
+            status: "yard",
+
+            relativePosition: -1,
+
+            trackIndex: null,
+
+            homeIndex: token.userData.id - 1,
+
+            finished: false,
+          };
+        });
+
+        refreshTokenPlacements();
+
+        winOverlay.classList.remove("show");
+
+        setMessage("Red to roll. A 6 brings a token out of the yard.");
+
+        updateHud();
+
+        resetCamera();
+      }
+
+      rollButton.addEventListener("click", requestRoll);
+
+      restartButton.addEventListener("click", () => {
+        winOverlay.classList.remove("show");
+
+        startLudoGame();
+      });
+
+      /* =========================================================
+     PUBLIC API
+  ========================================================= */
+
+      window.LudoGame = {
+        board: boardGroup,
+
+        dice: diceGroup,
+
+        tokens,
+
+        state: LUDO_GAME,
+
+        commonTrack: COMMON_TRACK,
+
+        homeLanes: HOME_LANES,
+
+        safeCells: SAFE_TRACK_INDEXES,
+
+        start: startLudoGame,
+
+        roll: requestRoll,
+
+        /*
+         * rollDice(value) forces a face, which is handy for
+         * testing a specific position
+         */
+        rollDice,
+
+        selectToken,
+
+        getValidTokens,
+
+        nextPlayer,
+
+        resetCamera,
+
+        focusCameraOn,
+
+        getDiceValue() {
+          return currentDiceValue;
+        },
+      };
+
+      startLudoGame();
+    </script>
+  </body>
+</html>

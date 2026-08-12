@@ -1,0 +1,255 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #17251c;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.ludo {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-host {
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-host canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================
+   HUD
+========================================================= */
+
+.hud {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 10;
+  color: white;
+  pointer-events: none;
+}
+
+.hud-title {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.hud-subtitle {
+  margin-top: 5px;
+  font-size: 11px;
+  opacity: 0.4;
+}
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+.panel {
+  position: fixed;
+  z-index: 10;
+  color: #f4ead1;
+  background: rgba(20, 33, 25, 0.82);
+  border: 1px solid rgba(244, 234, 209, 0.13);
+  border-radius: 14px;
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.turn-panel {
+  right: 24px;
+  bottom: 24px;
+  width: 236px;
+  padding: 16px 18px 18px;
+}
+
+.turn-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.turn-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(244, 234, 209, 0.12);
+  transition: background 0.25s;
+}
+
+.turn-name {
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+
+.turn-message {
+  margin-top: 9px;
+  margin-bottom: 12px;
+  min-height: 34px;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.72;
+}
+
+.roll-button {
+  width: 100%;
+  padding: 10px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  color: #1b2a20;
+  background: #e8d9ae;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    opacity 0.2s;
+}
+
+.roll-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.roll-button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.dice-readout {
+  margin-top: 10px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+
+/* =========================================================
+   SCOREBOARD
+========================================================= */
+
+.scoreboard {
+  right: 24px;
+  top: 24px;
+  padding: 12px 14px;
+  min-width: 168px;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border-radius: 7px;
+  font-size: 12px;
+  opacity: 0.5;
+  transition:
+    opacity 0.25s,
+    background 0.25s;
+}
+
+.score-row.active {
+  opacity: 1;
+  background: rgba(244, 234, 209, 0.1);
+}
+
+.score-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+.score-name {
+  flex: 1;
+}
+
+.score-count {
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+/* =========================================================
+   WIN OVERLAY
+========================================================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 19, 14, 0.72);
+}
+
+.overlay-card {
+  padding: 34px 46px;
+  text-align: center;
+  color: #f4ead1;
+  background: rgba(20, 33, 25, 0.95);
+  border: 1px solid rgba(244, 234, 209, 0.14);
+  border-radius: 18px;
+}
+
+.overlay-title {
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+
+.overlay-subtitle {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.overlay .roll-button {
+  margin-top: 22px;
+}
+
+/* =========================================================
+   SMALL SCREENS
+========================================================= */
+
+@media (max-width: 640px) {
+  .hud {
+    top: 16px;
+    left: 16px;
+  }
+
+  .turn-panel {
+    right: 14px;
+    left: 14px;
+    bottom: 14px;
+    width: auto;
+  }
+
+  .scoreboard {
+    right: 14px;
+    top: 14px;
+    padding: 8px 10px;
+    min-width: 0;
+  }
+}
