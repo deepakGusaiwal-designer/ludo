@@ -27,6 +27,13 @@ export function CameraControls({ sceneRef }) {
       </button>
       <button
         type="button"
+        className={`cam-btn ${activeAngle === "close" ? "active" : ""}`}
+        onClick={() => selectAngle("close")}
+      >
+        Close
+      </button>
+      <button
+        type="button"
         className={`cam-btn ${activeAngle === "top" ? "active" : ""}`}
         onClick={() => selectAngle("top")}
       >

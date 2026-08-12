@@ -317,26 +317,30 @@ export class LudoScene {
 
   setCameraAngle(mode) {
     switch (mode) {
+      case "close":
+      case "closest":
+        this.rig.setAngle(-0.05, 0, 9.5, 2.2);
+        break;
       case "top":
       case "2d":
-        this.rig.setAngle(1.15, 0, 24);
+        this.rig.setAngle(1.15, 0, 24, 14);
         break;
       case "red":
-        this.rig.setAngle(0.2, -Math.PI / 2, 25);
+        this.rig.setAngle(0.2, -Math.PI / 2, 25, 14);
         break;
       case "green":
-        this.rig.setAngle(0.2, 0, 25);
+        this.rig.setAngle(0.2, 0, 25, 14);
         break;
       case "yellow":
-        this.rig.setAngle(0.2, Math.PI / 2, 25);
+        this.rig.setAngle(0.2, Math.PI / 2, 25, 14);
         break;
       case "blue":
-        this.rig.setAngle(0.2, Math.PI, 25);
+        this.rig.setAngle(0.2, Math.PI, 25, 14);
         break;
       case "3d":
       case "default":
       default:
-        this.rig.setAngle(0, 0, 27);
+        this.rig.setAngle(0, 0, 27, 14);
         break;
     }
   }
@@ -442,7 +446,31 @@ export class LudoScene {
     this.hoveredToken = null;
 
     this.setHighlights([]);
-    this.syncPlacements(tokens, false);
+
+    // Staggered smooth parabolic flight for every token returning to yard
+    this.tokens.all.forEach((mesh, index) => {
+      const { color, slot } = mesh.userData;
+      const target = baseWorldPosition({ color, slot, position: -1 });
+
+      gsap
+        .timeline({ delay: index * 0.03 })
+        .to(mesh.position, { y: 1.5, duration: 0.25, ease: "power2.out" })
+        .to(mesh.position, {
+          x: target.x,
+          z: target.z,
+          duration: 0.4,
+          ease: "power2.inOut",
+        })
+        .to(mesh.position, {
+          y: TOKEN_HEIGHT,
+          duration: 0.28,
+          ease: "bounce.out",
+          onComplete: () => {
+            this.effects.triggerHopRipple(target, COLORS[color]);
+          },
+        });
+    });
+
     this.rig.reset();
   }
 

@@ -215,11 +215,10 @@ export function createDice() {
 
     const target = FACE_UP_ROTATION[value];
 
-    const tumble = {
-      x: diceGroup.rotation.x + Math.PI * randomInt(3, 5),
-      y: diceGroup.rotation.y + Math.PI * randomInt(3, 5),
-      z: diceGroup.rotation.z + Math.PI * randomInt(2, 4),
-    };
+    // Calculate final multi-turn rotations upfront for seamless deceleration
+    const finalX = forwardAngle(diceGroup.rotation.x + Math.PI * randomInt(4, 6), target.x);
+    const finalY = forwardAngle(diceGroup.rotation.y + Math.PI * randomInt(4, 6), target.y);
+    const finalZ = forwardAngle(diceGroup.rotation.z + Math.PI * randomInt(3, 5), target.z);
 
     return new Promise((resolve) => {
       const timeline = gsap.timeline({
@@ -229,31 +228,44 @@ export function createDice() {
         },
       });
 
+      // Upward throw
       timeline.to(diceGroup.position, {
-        y: 3.2,
-        duration: 0.35,
+        y: 3.4,
+        duration: 0.32,
         ease: "power2.out",
       });
 
-      timeline.to(
-        diceGroup.rotation,
-        { ...tumble, duration: 0.9, ease: "power2.inOut" },
-        "<",
-      );
-
+      // Gravity fall
       timeline.to(diceGroup.position, {
         y: 1.2,
-        duration: 0.5,
+        duration: 0.42,
+        ease: "power2.in",
+      });
+
+      // Micro bounce impact on board
+      timeline.to(diceGroup.position, {
+        y: 1.38,
+        duration: 0.1,
+        ease: "power1.out",
+      });
+      timeline.to(diceGroup.position, {
+        y: 1.2,
+        duration: 0.12,
         ease: "bounce.out",
       });
 
-      timeline.to(diceGroup.rotation, {
-        x: forwardAngle(tumble.x, target.x),
-        y: forwardAngle(tumble.y, target.y),
-        z: forwardAngle(tumble.z, target.z),
-        duration: 0.45,
-        ease: "back.out(1.5)",
-      });
+      // Single continuous rotation timeline covering the entire throw duration (0.94s)
+      timeline.to(
+        diceGroup.rotation,
+        {
+          x: finalX,
+          y: finalY,
+          z: finalZ,
+          duration: 0.94,
+          ease: "power3.out",
+        },
+        0,
+      );
     });
   }
 

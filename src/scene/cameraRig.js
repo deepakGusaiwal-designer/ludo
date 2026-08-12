@@ -56,7 +56,7 @@ export function createCameraRig(camera, domElement) {
 
     orbit.distance = THREE.MathUtils.clamp(
       orbit.distance + event.deltaY * 0.012,
-      14,
+      7,
       38,
     );
   }
@@ -68,10 +68,10 @@ export function createCameraRig(camera, domElement) {
   domElement.addEventListener("wheel", onWheel, { passive: false });
 
   function update() {
-    // Keep camera above ground height (y >= 2.0) to prevent viewing bottom of environment
-    const minHeight = 2.0;
+    // Keep camera above board ground surface
+    const minHeight = 1.2;
     const minRotX = Math.asin(
-      THREE.MathUtils.clamp((minHeight - orbit.height) / orbit.distance, -0.99, 0.99),
+      THREE.MathUtils.clamp((minHeight - orbit.height) / Math.max(orbit.distance, 1), -0.99, 0.99),
     );
 
     targetRotationX = Math.max(targetRotationX, minRotX);
@@ -85,15 +85,22 @@ export function createCameraRig(camera, domElement) {
 
     camera.position.x = target.x + Math.sin(currentRotationY) * horizontal;
     camera.position.z = target.z + Math.cos(currentRotationY) * horizontal;
-    camera.position.y =
-      orbit.height + Math.sin(currentRotationX) * orbit.distance;
+    camera.position.y = Math.max(
+      minHeight,
+      orbit.height + Math.sin(currentRotationX) * orbit.distance,
+    );
 
     camera.lookAt(target);
   }
 
-  function setAngle(rotX, rotY, distance = DEFAULT_DISTANCE) {
+  function setAngle(rotX, rotY, distance = DEFAULT_DISTANCE, targetHeight = 14) {
     gsap.killTweensOf(orbit);
-    gsap.to(orbit, { distance, duration: 0.9, ease: "power2.inOut" });
+    gsap.to(orbit, {
+      distance,
+      height: targetHeight,
+      duration: 0.9,
+      ease: "power2.inOut",
+    });
 
     const animObj = { rx: targetRotationX, ry: targetRotationY };
 
