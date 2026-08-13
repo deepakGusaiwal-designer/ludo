@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { VolumeHighIcon, VolumeOffIcon } from "hugeicons-react";
 import { getMuted, playClick, toggleMuted } from "../game/audio.js";
 
 export function AudioToggle() {
@@ -13,12 +14,12 @@ export function AudioToggle() {
   return (
     <button
       type="button"
-      className="audio-toggle-btn"
+      className="icon-hud-btn"
       onClick={handleToggle}
-      title={muted ? "Unmute sound effects" : "Mute sound effects"}
-      aria-label={muted ? "Unmute sound effects" : "Mute sound effects"}
+      title={muted ? "Unmute Sound" : "Mute Sound"}
+      aria-label={muted ? "Unmute Sound" : "Mute Sound"}
     >
-      {muted ? "🔇 Sound Off" : "🔊 Sound On"}
+      {muted ? <VolumeOffIcon size={16} /> : <VolumeHighIcon size={16} />}
     </button>
   );
 }

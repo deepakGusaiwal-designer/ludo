@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { labelFor } from "../game/constants.js";
+import { PLAYER_COLORS, labelFor } from "../game/constants.js";
+import {
+  DEFAULT_PLAYER_CONFIG,
+  chooseBestMove,
+  getNextActiveColor,
+} from "../game/ai.js";
 
 import {
   applyMove,
@@ -8,7 +13,6 @@ import {
   currentColor,
   earnsExtraTurn,
   evaluateRoll,
-  nextPlayerIndex,
   tokenById,
 } from "../game/rules.js";
 
@@ -24,21 +28,20 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const rollValue = () => 1 + Math.floor(Math.random() * 6);
 
-/**
- * The turn machine.
- *
- * The authoritative game lives in a ref so that async steps
- * never read stale state; `publish` copies it into React state
- * whenever the UI needs to repaint.
- *
- * Statuses:
- *   idle      waiting for a roll
- *   rolling   dice in the air
- *   choosing  waiting for the player to pick a token
- *   moving    a token is travelling, input is locked
- *   over      somebody won
- */
 const STORAGE_KEY = "ludo_game_state";
+const CONFIG_KEY = "ludo_player_config";
+
+function loadSavedConfig() {
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    if (!raw) return DEFAULT_PLAYER_CONFIG;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.controllers) return parsed;
+  } catch (e) {
+    console.error("Failed to load saved player config:", e);
+  }
+  return DEFAULT_PLAYER_CONFIG;
+}
 
 function loadSavedState() {
   try {
@@ -60,7 +63,9 @@ function loadSavedState() {
   return null;
 }
 
-export function useLudoGame(sceneRef, ready) {
+export function useLudoGame(sceneRef, ready, onlineState = null) {
+  const [playerConfig, setPlayerConfig] = useState(loadSavedConfig);
+
   const machine = useRef(null);
   if (!machine.current) {
     machine.current = loadSavedState() || {
@@ -98,9 +103,13 @@ export function useLudoGame(sceneRef, ready) {
   const advanceTurn = useCallback(() => {
     const m = machine.current;
 
+    const current = currentColor(m.state);
+    const nextColor = getNextActiveColor(current, playerConfig.controllers);
+    const nextIndex = PLAYER_COLORS.indexOf(nextColor);
+
     m.state = {
       ...m.state,
-      currentPlayer: nextPlayerIndex(m.state),
+      currentPlayer: nextIndex,
       sixCount: 0,
       dice: null,
     };
@@ -108,13 +117,15 @@ export function useLudoGame(sceneRef, ready) {
     m.dice = null;
     m.legalMoves = [];
     m.status = "idle";
-    m.message = `${labelFor(currentColor(m.state))} to roll.`;
+
+    const isComputer = playerConfig.controllers[nextColor] === "computer";
+    m.message = `${labelFor(nextColor)}${isComputer ? " (AI)" : ""} to roll.`;
 
     sceneRef.current?.setHighlights([]);
     sceneRef.current?.setTurnColor(currentColor(m.state));
 
     publish();
-  }, [publish, sceneRef]);
+  }, [playerConfig, publish, sceneRef]);
 
   /** Moves a token the player has chosen (or the only legal one). */
   const play = useCallback(
@@ -136,6 +147,10 @@ export function useLudoGame(sceneRef, ready) {
 
       scene.setHighlights([]);
       publish();
+
+      if (onlineState?.room && onlineState.myColor === mover.toLowerCase()) {
+        onlineState.sendMoveToken(tokenId, mover.toLowerCase());
+      }
 
       const result = applyMove(m.state, tokenId, dice);
 
@@ -195,7 +210,8 @@ export function useLudoGame(sceneRef, ready) {
 
     if (!scene || m.status !== "idle" || m.state.winner) return;
 
-    const name = labelFor(currentColor(m.state));
+    const activeColor = currentColor(m.state);
+    const name = labelFor(activeColor);
 
     m.status = "rolling";
     m.message = `${name} is rolling…`;
@@ -203,6 +219,10 @@ export function useLudoGame(sceneRef, ready) {
     publish();
 
     const value = await scene.rollDice(rollValue());
+
+    if (onlineState?.room && onlineState.myColor === activeColor) {
+      onlineState.sendRollDice(activeColor, value);
+    }
 
     if (!alive.current) return;
 
@@ -252,22 +272,23 @@ export function useLudoGame(sceneRef, ready) {
 
     scene.setHighlights(outcome.legalMoves);
 
+    const isComputer = playerConfig.controllers[activeColor] === "computer";
     m.message =
       outcome.kind === "forced"
-        ? `${name} rolled ${value} — only one move available.`
-        : `${name} rolled ${value} — pick a token.`;
+        ? `${name} rolled ${value} — forced move.`
+        : `${name} rolled ${value} — ${isComputer ? "AI thinking..." : "pick a token."}`;
 
     publish();
 
-    // Nothing to decide, so take it after a beat.
-    if (outcome.kind === "forced") {
+    // Forced single move for Human
+    if (outcome.kind === "forced" && !isComputer) {
       await wait(FORCED_MOVE_PAUSE);
 
       if (alive.current && machine.current.status === "choosing") {
         play(outcome.legalMoves[0]);
       }
     }
-  }, [advanceTurn, play, publish, sceneRef]);
+  }, [advanceTurn, play, playerConfig, publish, sceneRef]);
 
   const restart = useCallback(() => {
     const m = machine.current;
@@ -284,6 +305,201 @@ export function useLudoGame(sceneRef, ready) {
     publish();
   }, [publish, sceneRef]);
 
+  const startNewMatch = useCallback(
+    (newConfig) => {
+      setPlayerConfig(newConfig);
+      try {
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(newConfig));
+      } catch (e) {
+        console.error("Failed to save player config:", e);
+      }
+
+      const m = machine.current;
+      m.state = createInitialState();
+
+      // Find first active player
+      const startColor = getNextActiveColor("blue", newConfig.controllers);
+      m.state.currentPlayer = PLAYER_COLORS.indexOf(startColor);
+
+      m.status = "idle";
+      m.dice = null;
+      m.legalMoves = [];
+
+      const isComputer = newConfig.controllers[startColor] === "computer";
+      m.message = `${labelFor(startColor)}${isComputer ? " (AI)" : ""} to roll.`;
+
+      sceneRef.current?.resetTokens(m.state.tokens);
+      sceneRef.current?.setTurnColor(startColor);
+
+      publish();
+    },
+    [publish, sceneRef],
+  );
+
+  /* Automated Computer AI Turn Loop */
+  useEffect(() => {
+    if (!ready || view.state.winner) return undefined;
+
+    const activeColor = currentColor(view.state);
+    const controllerType = playerConfig.controllers[activeColor];
+
+    if (controllerType !== "computer") return undefined;
+
+    let timer;
+
+    if (view.status === "idle") {
+      timer = setTimeout(() => {
+        if (alive.current && machine.current.status === "idle") {
+          roll();
+        }
+      }, 750);
+    } else if (view.status === "choosing" && view.legalMoves.length > 0) {
+      timer = setTimeout(() => {
+        if (alive.current && machine.current.status === "choosing") {
+          const candidates = machine.current.legalMoves.map((tokenId) => {
+            const result = applyMove(
+              machine.current.state,
+              tokenId,
+              machine.current.dice,
+            );
+            return {
+              tokenId,
+              from: machine.current.state.tokens[tokenId]?.position,
+              to: result.to,
+              entered: result.entered,
+              finished: result.finished,
+              captured: result.captured,
+            };
+          });
+
+          const chosen = chooseBestMove(
+            machine.current.state,
+            candidates,
+            playerConfig.difficulty,
+          );
+
+          if (chosen) {
+            play(chosen.tokenId);
+          }
+        }
+      }, 650);
+    }
+
+    return () => clearTimeout(timer);
+  }, [
+    view.status,
+    view.state,
+    view.legalMoves,
+    playerConfig,
+    ready,
+    roll,
+    play,
+  ]);
+
+  const pendingRemoteMoveRef = useRef(null);
+
+  const rollRemote = useCallback(
+    async (presetValue) => {
+      const m = machine.current;
+      const scene = sceneRef.current;
+      if (!scene || m.status !== "idle" || m.state.winner) return;
+
+      const activeColor = currentColor(m.state);
+      const name = labelFor(activeColor);
+
+      m.status = "rolling";
+      m.message = `${name} is rolling…`;
+      publish();
+
+      const value = await scene.rollDice(presetValue);
+
+      if (!alive.current) return;
+
+      m.dice = value;
+      const outcome = evaluateRoll(m.state, value);
+      m.state = { ...m.state, sixCount: outcome.sixCount, dice: value };
+
+      if (outcome.kind === "forfeit") {
+        m.status = "moving";
+        m.message = `${name} rolled three sixes — turn forfeited.`;
+        publish();
+        await wait(FORFEIT_PAUSE);
+        if (alive.current) advanceTurn();
+        return;
+      }
+
+      if (outcome.kind === "pass") {
+        m.status = "moving";
+        m.message = `${name} rolled ${value} — no legal move.`;
+        publish();
+        await wait(DEAD_ROLL_PAUSE);
+        if (alive.current) advanceTurn();
+        return;
+      }
+
+      if (outcome.kind === "reroll") {
+        m.status = "idle";
+        m.message = `${name} rolled a 6 but has no legal move. Roll again.`;
+        publish();
+        return;
+      }
+
+      m.legalMoves = outcome.legalMoves;
+      m.status = "choosing";
+      scene.setHighlights(outcome.legalMoves);
+
+      m.message =
+        outcome.kind === "forced"
+          ? `${name} rolled ${value} — forced move.`
+          : `${name} rolled ${value} — picking token.`;
+
+      publish();
+
+      if (pendingRemoteMoveRef.current) {
+        const moveId = pendingRemoteMoveRef.current;
+        pendingRemoteMoveRef.current = null;
+        play(moveId);
+      } else if (outcome.kind === "forced") {
+        await wait(FORCED_MOVE_PAUSE);
+        if (alive.current && machine.current.status === "choosing") {
+          play(outcome.legalMoves[0]);
+        }
+      }
+    },
+    [advanceTurn, play, publish, sceneRef],
+  );
+
+  /* Listen to remote WebSocket events from other PCs */
+  useEffect(() => {
+    if (!onlineState?.socket) return undefined;
+
+    const socket = onlineState.socket;
+
+    const handleRemoteRoll = ({ color, value }) => {
+      if (onlineState.room && onlineState.myColor !== color) {
+        rollRemote(value);
+      }
+    };
+
+    const handleRemoteMove = ({ tokenId, color }) => {
+      if (onlineState.room && onlineState.myColor !== color) {
+        if (machine.current.status === "choosing") {
+          play(tokenId);
+        } else {
+          pendingRemoteMoveRef.current = tokenId;
+        }
+      }
+    };
+
+    socket.on("remote_roll_dice", handleRemoteRoll);
+    socket.on("remote_move_token", handleRemoteMove);
+
+    return () => {
+      socket.off("remote_roll_dice", handleRemoteRoll);
+      socket.off("remote_move_token", handleRemoteMove);
+    };
+  }, [onlineState, rollRemote, play]);
+
   /* wire board input once the scene exists */
 
   useEffect(() => {
@@ -291,8 +507,23 @@ export function useLudoGame(sceneRef, ready) {
 
     if (!ready || !scene) return undefined;
 
-    scene.onDiceClick(() => roll());
-    scene.onTokenClick((tokenId) => play(tokenId));
+    scene.onDiceClick(() => {
+      const activeColor = currentColor(machine.current.state);
+      if (onlineState?.room) {
+        if (onlineState.myColor === activeColor) roll();
+      } else if (playerConfig.controllers[activeColor] === "human") {
+        roll();
+      }
+    });
+
+    scene.onTokenClick((tokenId) => {
+      const activeColor = currentColor(machine.current.state);
+      if (onlineState?.room) {
+        if (onlineState.myColor === activeColor) play(tokenId);
+      } else if (playerConfig.controllers[activeColor] === "human") {
+        play(tokenId);
+      }
+    });
 
     scene.setTurnColor(currentColor(machine.current.state));
     scene.syncPlacements(machine.current.state.tokens, false);
@@ -308,13 +539,20 @@ export function useLudoGame(sceneRef, ready) {
       scene.onDiceClick(null);
       scene.onTokenClick(null);
     };
-  }, [play, ready, roll, sceneRef]);
+  }, [play, playerConfig, ready, roll, sceneRef, onlineState]);
+
+  const activeColor = currentColor(view.state);
+  const isCurrentHuman = onlineState?.room
+    ? onlineState.myColor === activeColor
+    : playerConfig.controllers[activeColor] === "human";
 
   return {
     ...view,
-    canRoll: view.status === "idle" && !view.state.winner,
+    playerConfig,
+    canRoll: view.status === "idle" && !view.state.winner && isCurrentHuman,
     roll,
     play,
     restart,
+    startNewMatch,
   };
 }

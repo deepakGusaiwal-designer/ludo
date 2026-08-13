@@ -23,20 +23,62 @@ export function createCameraRig(camera, domElement) {
   let currentRotationX = 0;
   let currentRotationY = 0;
 
+  const activePointers = new Map();
+  let initialPinchDistance = 0;
+
+  function getPinchDistance(p1, p2) {
+    const dx = p1.clientX - p2.clientX;
+    const dy = p1.clientY - p2.clientY;
+    return Math.hypot(dx, dy);
+  }
+
   function onPointerDown(event) {
-    dragging = true;
-    previousX = event.clientX;
-    previousY = event.clientY;
-    domElement.setPointerCapture(event.pointerId);
+    activePointers.set(event.pointerId, event);
+
+    if (activePointers.size === 1) {
+      dragging = true;
+      previousX = event.clientX;
+      previousY = event.clientY;
+      if (domElement.setPointerCapture) {
+        try {
+          domElement.setPointerCapture(event.pointerId);
+        } catch (e) {
+          // ignore pointer capture errors on mobile
+        }
+      }
+    } else if (activePointers.size === 2) {
+      dragging = false;
+      const [p1, p2] = Array.from(activePointers.values());
+      initialPinchDistance = getPinchDistance(p1, p2);
+    }
   }
 
   function onPointerMove(event) {
+    if (activePointers.has(event.pointerId)) {
+      activePointers.set(event.pointerId, event);
+    }
+
+    if (activePointers.size >= 2) {
+      const [p1, p2] = Array.from(activePointers.values());
+      const newDistance = getPinchDistance(p1, p2);
+      const delta = newDistance - initialPinchDistance;
+
+      if (Math.abs(delta) > 1.5) {
+        gsap.killTweensOf(orbit);
+        orbit.distance = THREE.MathUtils.clamp(
+          orbit.distance - delta * 0.05,
+          6,
+          38,
+        );
+        initialPinchDistance = newDistance;
+      }
+      return;
+    }
+
     if (!dragging) return;
 
     targetRotationY += (event.clientX - previousX) * 0.005;
     targetRotationX += (event.clientY - previousY) * 0.003;
-
-    // Pitch limit: allow low perspective up to steep top-down view
     targetRotationX = THREE.MathUtils.clamp(targetRotationX, -0.65, 1.25);
 
     previousX = event.clientX;
@@ -44,9 +86,19 @@ export function createCameraRig(camera, domElement) {
   }
 
   function onPointerUp(event) {
-    dragging = false;
-    if (domElement.hasPointerCapture?.(event.pointerId)) {
-      domElement.releasePointerCapture(event.pointerId);
+    activePointers.delete(event.pointerId);
+    if (activePointers.size < 2) {
+      initialPinchDistance = 0;
+    }
+    if (activePointers.size === 0) {
+      dragging = false;
+    }
+    if (domElement.releasePointerCapture) {
+      try {
+        domElement.releasePointerCapture(event.pointerId);
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
@@ -56,7 +108,7 @@ export function createCameraRig(camera, domElement) {
 
     orbit.distance = THREE.MathUtils.clamp(
       orbit.distance + event.deltaY * 0.012,
-      7,
+      6,
       38,
     );
   }

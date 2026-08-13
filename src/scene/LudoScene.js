@@ -49,9 +49,10 @@ export class LudoScene {
 
     this.scene = new THREE.Scene();
 
-    this.scene.background = new THREE.Color("#304338");
+    this.scene.background = new THREE.Color("#273a30");
 
-    this.scene.fog = new THREE.Fog(new THREE.Color("#304338"), 18, 58);
+    // Clearer, farther fog so 3D board & forest look sharp and vibrant on mobile
+    this.scene.fog = new THREE.Fog(new THREE.Color("#273a30"), isMobile ? 32 : 22, isMobile ? 85 : 64);
 
     /* camera */
 
@@ -73,24 +74,25 @@ export class LudoScene {
 
     this.renderer.setSize(container.clientWidth, container.clientHeight);
 
+    // High-DPI sharp rendering for mobile retina screens
     this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.75),
+      Math.min(window.devicePixelRatio, isMobile ? 2.0 : 1.75),
     );
 
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = isMobile ? 1.15 : 1.05;
 
     container.appendChild(this.renderer.domElement);
 
     /* lighting */
 
-    this.scene.add(new THREE.HemisphereLight("#dcebd5", "#28362b", 1.7));
+    this.scene.add(new THREE.HemisphereLight("#e8f5e3", "#28362b", isMobile ? 1.9 : 1.7));
 
     // Warm ambient fill light for softer overall illumination
-    const ambient = new THREE.AmbientLight("#e8dcc4", 0.65);
+    const ambient = new THREE.AmbientLight("#f4e8d0", isMobile ? 0.75 : 0.65);
     this.scene.add(ambient);
 
     const sun = new THREE.DirectionalLight("#ffe4b8", 3);
