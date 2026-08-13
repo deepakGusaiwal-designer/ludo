@@ -97,8 +97,16 @@ export function createBoard() {
     new THREE.BoxGeometry(HOME_SIZE * CELL_SIZE, 0.14, HOME_SIZE * CELL_SIZE),
   );
 
+  const yardWhiteBaseGeometry = track(
+    new THREE.BoxGeometry(4.5 * CELL_SIZE, 0.03, 4.5 * CELL_SIZE),
+  );
+
   const yardInnerGeometry = track(
     new THREE.BoxGeometry(4.3 * CELL_SIZE, 0.04, 4.3 * CELL_SIZE),
+  );
+
+  const slotWhiteBaseGeometry = track(
+    new THREE.CylinderGeometry(0.24, 0.24, 0.015, 24),
   );
 
   const slotGeometry = track(new THREE.CylinderGeometry(0.20, 0.20, 0.02, 24));
@@ -119,6 +127,12 @@ export function createBoard() {
 
     group.add(pad);
 
+    // Crisp white bottom surface plate under colored home board
+    const whiteBase = new THREE.Mesh(yardWhiteBaseGeometry, boardMaterials.white);
+    whiteBase.position.set(x, 0.11, z);
+    whiteBase.receiveShadow = true;
+    group.add(whiteBase);
+
     // Colored home board floor showing the player's vibrant color
     const inner = new THREE.Mesh(yardInnerGeometry, colorMaterial(color));
 
@@ -127,16 +141,21 @@ export function createBoard() {
 
     group.add(inner);
 
-    // White circle target slots for tokens
+    // White circle target slots for tokens with subtle white base ring
     for (const [sx, sz] of [
       [-1, -1],
       [1, -1],
       [-1, 1],
       [1, 1],
     ]) {
+      const slotBase = new THREE.Mesh(slotWhiteBaseGeometry, boardMaterials.white);
+      slotBase.position.set(x + sx * 0.72, 0.14, z + sz * 0.72);
+      slotBase.receiveShadow = true;
+      group.add(slotBase);
+
       const slot = new THREE.Mesh(slotGeometry, boardMaterials.white);
 
-      slot.position.set(x + sx * 0.72, 0.15, z + sz * 0.72);
+      slot.position.set(x + sx * 0.72, 0.155, z + sz * 0.72);
       slot.receiveShadow = true;
 
       group.add(slot);
@@ -287,7 +306,7 @@ function createCenter(track) {
 
   const border = new THREE.Mesh(
     track(new THREE.BoxGeometry(3 * CELL_SIZE + 0.08, 0.04, 3 * CELL_SIZE + 0.08)),
-    getMaterial("#c49b50", { roughness: 0.5 }),
+    getMaterial("#d97706", { roughness: 0.25, metalness: 0.85 }),
   );
 
   border.position.y = 0.02;

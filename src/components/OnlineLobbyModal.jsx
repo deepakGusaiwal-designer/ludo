@@ -1,4 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  Add01Icon,
+  Alert02Icon,
+  Cancel01Icon,
+  Globe02Icon,
+  Key01Icon,
+  Sword01Icon,
+  UserGroupIcon,
+} from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
 import { GsapRadio } from "./GsapFormControls.jsx";
 
@@ -73,10 +82,12 @@ export function OnlineLobbyModal({
             onClick={onCancel}
             title="Close online lobby"
           >
-            ✕
+            <Cancel01Icon size={16} />
           </button>
         )}
-        <div className="glass-modal-icon">🌐</div>
+        <div className="glass-modal-icon">
+          <Globe02Icon size={38} color="#38bdf8" />
+        </div>
         <h2 className="glass-modal-title">Online Realtime Multiplayer</h2>
         <p className="glass-modal-desc">
           Play with friends across different PCs and physical locations:
@@ -88,7 +99,11 @@ export function OnlineLobbyModal({
           <span>{isConnected ? "Connected to Server" : "Connecting to Server..."}</span>
         </div>
 
-        {error && <div className="online-error-alert">⚠️ {error}</div>}
+        {error && (
+          <div className="online-error-alert">
+            <Alert02Icon size={14} color="#ef4444" /> {error}
+          </div>
+        )}
 
         {/* Mode Selector */}
         {!room && tab === "mode" && (
@@ -98,7 +113,11 @@ export function OnlineLobbyModal({
               className="lobby-preset-btn"
               onClick={() => setTab("create")}
             >
-              <div className="lobby-preset-title">➕ Create Online Room</div>
+              <div className="lobby-preset-title">
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Add01Icon size={16} /> Create Online Room
+                </span>
+              </div>
               <div className="lobby-preset-desc">Host a room and invite friends via Room Code</div>
             </button>
 
@@ -107,7 +126,11 @@ export function OnlineLobbyModal({
               className="lobby-preset-btn"
               onClick={() => setTab("join")}
             >
-              <div className="lobby-preset-title">🔑 Join Friend's Room</div>
+              <div className="lobby-preset-title">
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Key01Icon size={16} /> Join Friend's Room
+                </span>
+              </div>
               <div className="lobby-preset-desc">Enter a Room Code to join an existing match</div>
             </button>
           </div>
@@ -136,7 +159,9 @@ export function OnlineLobbyModal({
                   checked={matchMode === "1v1"}
                   onChange={(e) => setMatchMode(e.target.value)}
                 >
-                  ⚔️ 1v1 Match (2 Players)
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <Sword01Icon size={14} /> 1v1 Match (2 Players)
+                  </span>
                 </GsapRadio>
                 <GsapRadio
                   name="matchMode"
@@ -144,7 +169,9 @@ export function OnlineLobbyModal({
                   checked={matchMode === "4p"}
                   onChange={(e) => setMatchMode(e.target.value)}
                 >
-                  👥 4 Players Battle
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                    <UserGroupIcon size={14} /> 4 Players Battle
+                  </span>
                 </GsapRadio>
               </div>
             </div>

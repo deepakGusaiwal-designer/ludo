@@ -9,7 +9,8 @@ const CONFIG = {
   treeCount: 42,
   bushCount: 45,
   rockCount: 40,
-  grassCount: 180,
+  grassCount: 300,
+  nearBoardGrassCount: 150,
   logCount: 7,
 
   deerCount: 4,
@@ -19,7 +20,8 @@ const CONFIG = {
   flowerCount: 20,
 
   mobileTreeCount: 25,
-  mobileGrassCount: 80,
+  mobileGrassCount: 120,
+  mobileNearBoardGrassCount: 65,
 };
 
 const PALETTE = {
@@ -78,27 +80,76 @@ function createGroundTexture() {
   canvas.height = 256;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#334535";
+  // Rich earthy soil base
+  ctx.fillStyle = "#2c3b2e";
   ctx.fillRect(0, 0, 256, 256);
 
-  for (let i = 0; i < 600; i++) {
+  // Earth patches
+  for (let i = 0; i < 900; i++) {
     const x = Math.random() * 256;
     const y = Math.random() * 256;
-    const g = 40 + Math.random() * 30;
-    ctx.fillStyle = `rgba(${g - 10},${g + 20},${g - 5},${0.08 + Math.random() * 0.15})`;
+    const g = 35 + Math.random() * 35;
+    ctx.fillStyle = `rgba(${g - 5},${g + 18},${g - 10},${0.1 + Math.random() * 0.2})`;
     ctx.beginPath();
-    ctx.arc(x, y, 1 + Math.random() * 4, 0, Math.PI * 2);
+    ctx.arc(x, y, 1 + Math.random() * 5, 0, Math.PI * 2);
     ctx.fill();
   }
-  for (let i = 0; i < 80; i++) {
-    ctx.fillStyle = `rgba(60,50,35,${0.04 + Math.random() * 0.08})`;
-    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 6, 2 + Math.random() * 6);
+
+  // Hard soil & gravel specs
+  for (let i = 0; i < 180; i++) {
+    ctx.fillStyle = `rgba(65,55,42,${0.08 + Math.random() * 0.14})`;
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 7, 2 + Math.random() * 7);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(8, 8);
+  tex.repeat.set(10, 10);
+  return tex;
+}
+
+function createGroundBumpMap() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+
+  // Neutral grey base
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Heavy rough gravel & dirt noise
+  for (let i = 0; i < 2200; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const val = Math.floor(Math.random() * 255);
+    const radius = 0.5 + Math.random() * 2.8;
+    ctx.fillStyle = `rgb(${val},${val},${val})`;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Soil cracks & stone ridges
+  ctx.strokeStyle = "#252525";
+  ctx.lineWidth = 1.4;
+  for (let i = 0; i < 20; i++) {
+    ctx.beginPath();
+    let cx = Math.random() * 256;
+    let cy = Math.random() * 256;
+    ctx.moveTo(cx, cy);
+    for (let j = 0; j < 5; j++) {
+      cx += (Math.random() - 0.5) * 35;
+      cy += (Math.random() - 0.5) * 35;
+      ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(12, 12);
   return tex;
 }
 
@@ -133,6 +184,7 @@ export function createForest({ isMobile }) {
 
   const barkTexture = createBarkTexture();
   const groundTexture = createGroundTexture();
+  const groundBumpMap = createGroundBumpMap();
   const rockTexture = createRockTexture();
 
   const barkMaterial = new THREE.MeshStandardMaterial({
@@ -189,6 +241,16 @@ export function createForest({ isMobile }) {
     } while (Math.hypot(x, z) < CONFIG.boardSafeRadius);
 
     return { x, z };
+  }
+
+  /** A spot closely surrounding the board edges (radius 6.3 to 11.2). */
+  function nearBoardPosition() {
+    const angle = random(0, Math.PI * 2);
+    const radius = random(6.3, 11.2);
+    return {
+      x: Math.cos(angle) * radius,
+      z: Math.sin(angle) * radius,
+    };
   }
 
   function createTree() {
@@ -288,15 +350,29 @@ export function createForest({ isMobile }) {
 
     const material = getMaterial(pick(PALETTE.grass));
 
-    for (let i = 0, count = randomInt(4, 8); i < count; i++) {
+    for (let i = 0, count = randomInt(6, 11); i < count; i++) {
       const blade = new THREE.Mesh(geometries.grass, material);
 
-      blade.position.set(random(-0.3, 0.3), 0.25, random(-0.3, 0.3));
-      blade.rotation.z = random(-0.3, 0.3);
+      blade.position.set(random(-0.35, 0.35), 0.25, random(-0.35, 0.35));
+      blade.rotation.z = random(-0.35, 0.35);
+      blade.rotation.x = random(-0.2, 0.2);
       blade.rotation.y = random(0, Math.PI * 2);
 
       group.add(blade);
     }
+
+    const baseRotZ = random(-0.15, 0.15);
+    const baseRotX = random(-0.1, 0.1);
+    group.rotation.z = baseRotZ;
+    group.rotation.x = baseRotX;
+
+    group.userData = {
+      isGrass: true,
+      baseRotZ,
+      baseRotX,
+      windScale: random(0.85, 1.45),
+      windPhase: random(0, Math.PI * 2),
+    };
 
     return group;
   }
@@ -557,6 +633,42 @@ export function createForest({ isMobile }) {
     return flower;
   }
 
+  /* —— 3D Fluffy Sky Clouds —— */
+
+  const cloudMaterial = new THREE.MeshStandardMaterial({
+    color: "#ffffff",
+    roughness: 0.85,
+    metalness: 0.05,
+    transparent: true,
+    opacity: 0.88,
+  });
+
+  const cloudGeo = new THREE.IcosahedronGeometry(1.8, 1);
+
+  function createCloud() {
+    const cloud = new THREE.Group();
+    const puffCount = randomInt(4, 7);
+
+    for (let i = 0; i < puffCount; i++) {
+      const puff = new THREE.Mesh(cloudGeo, cloudMaterial);
+      const scale = random(0.85, 1.65);
+      puff.scale.set(scale * 1.35, scale * random(0.65, 0.95), scale * 1.1);
+      puff.position.set(
+        (i - puffCount / 2) * 1.5 + random(-0.4, 0.4),
+        random(-0.25, 0.35),
+        random(-0.6, 0.6)
+      );
+      cloud.add(puff);
+    }
+
+    cloud.userData = {
+      isCloud: true,
+      speed: random(0.35, 0.85),
+    };
+
+    return cloud;
+  }
+
   /* —— Place everything —— */
 
   const treeCount = isMobile ? CONFIG.mobileTreeCount : CONFIG.treeCount;
@@ -590,7 +702,20 @@ export function createForest({ isMobile }) {
     const grass = createGrass();
     const { x, z } = forestPosition();
     grass.position.set(x, 0, z);
-    grass.scale.setScalar(random(0.6, 1.2));
+    grass.scale.setScalar(random(0.7, 1.3));
+    forest.add(grass);
+  }
+
+  // Dense Grass Ringing Directly Around the Board Edges
+  const nearBoardCount = isMobile
+    ? CONFIG.mobileNearBoardGrassCount
+    : CONFIG.nearBoardGrassCount;
+
+  for (let i = 0; i < nearBoardCount; i++) {
+    const grass = createGrass();
+    const { x, z } = nearBoardPosition();
+    grass.position.set(x, 0, z);
+    grass.scale.setScalar(random(0.8, 1.45));
     forest.add(grass);
   }
 
@@ -649,6 +774,14 @@ export function createForest({ isMobile }) {
     flower.position.set(x, 0, z);
     flower.rotation.y = random(0, Math.PI * 2);
     forest.add(flower);
+  }
+
+  // 3D Sky Clouds
+  const cloudCount = isMobile ? 8 : 14;
+  for (let i = 0; i < cloudCount; i++) {
+    const cloud = createCloud();
+    cloud.position.set(random(-35, 35), random(16, 26), random(-35, 35));
+    forest.add(cloud);
   }
 
   /* --- Bonfires & People (Campers) --- */
@@ -878,9 +1011,29 @@ export function createForest({ isMobile }) {
 
   const groundGeometry = new THREE.CircleGeometry(45, 64);
 
+  // Apply subtle hard/rough micro-terrain height contour displacement
+  const posAttr = groundGeometry.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const vx = posAttr.getX(i);
+    const vy = posAttr.getY(i);
+    const dist = Math.hypot(vx, vy);
+    // Keep area directly under board (radius < 6.2) perfectly flat for clean board placement
+    if (dist > 6.2) {
+      const heightBump =
+        Math.sin(vx * 0.35) * Math.cos(vy * 0.35) * 0.14 +
+        Math.sin(vx * 0.9 + vy * 0.7) * 0.05 +
+        Math.cos(vx * 1.5 - vy * 1.2) * 0.03;
+      posAttr.setZ(i, heightBump);
+    }
+  }
+  groundGeometry.computeVertexNormals();
+
   const groundMaterial = new THREE.MeshStandardMaterial({
     map: groundTexture,
-    roughness: 1,
+    bumpMap: groundBumpMap,
+    bumpScale: 0.18,
+    roughness: 0.95,
+    metalness: 0.1,
     color: PALETTE.ground,
   });
 
@@ -948,17 +1101,49 @@ export function createForest({ isMobile }) {
   const rainParticles = new THREE.Points(rainGeometry, rainMaterial);
   forest.add(rainParticles);
 
-  /** Gentle sway + animal animation, called once per frame. */
+  /** Gentle sway + wind wave + animal animation, called once per frame. */
   function update(time) {
+    const windTime = time * 2.2;
+
     forest.traverse((object) => {
       const data = object.userData;
 
       if (!data) return;
 
-      // Tree sway
+      // Floating Cloud Drift
+      if (data.isCloud) {
+        object.position.x += data.speed * 0.025;
+        if (object.position.x > 42) {
+          object.position.x = -42;
+        }
+      }
+
+      // Realistic travelling wind wave effect on grass blades
+      if (data.isGrass) {
+        const gx = object.position.x;
+        const gz = object.position.z;
+        const wave1 = Math.sin(windTime + gx * 0.14 + gz * 0.18) * 0.22;
+        const wave2 = Math.cos(windTime * 0.65 - gx * 0.12 + gz * 0.09) * 0.11;
+        const gust = Math.sin(windTime * 0.35 + gx * 0.04) * 0.08;
+        const totalWind = (wave1 + wave2 + gust) * data.windScale;
+
+        object.rotation.z = data.baseRotZ + totalWind * 0.85;
+        object.rotation.x =
+          data.baseRotX +
+          totalWind * 0.45 +
+          Math.sin(windTime * 3.8 + data.windPhase) * 0.05;
+      }
+
+      // Tree & bush wind sway
       if (data.swayAmount) {
+        const gx = object.position.x || 0;
+        const gz = object.position.z || 0;
         object.rotation.z =
-          Math.sin(time * data.swaySpeed + data.phase) * data.swayAmount;
+          Math.sin(time * data.swaySpeed + data.phase + gx * 0.08 + gz * 0.08) *
+          data.swayAmount;
+        object.rotation.x =
+          Math.cos(time * (data.swaySpeed * 0.8) + data.phase) *
+          (data.swayAmount * 0.5);
       }
 
       // Deer / rabbit idle bob
@@ -1023,11 +1208,14 @@ export function createForest({ isMobile }) {
     groundMaterial.dispose();
     particleGeometry.dispose();
     particleMaterial.dispose();
+    cloudGeo.dispose();
+    cloudMaterial.dispose();
     rainGeometry.dispose();
     rainMaterial.dispose();
     barkTexture.dispose();
     barkMaterial.dispose();
     groundTexture.dispose();
+    groundBumpMap.dispose();
     rockTexture.dispose();
     texturedRockMaterial.dispose();
   }
