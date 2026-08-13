@@ -70,7 +70,8 @@ export function LudoGame() {
 
       <header className="hud">
         <div className="hud-brand">
-          <div className="hud-title">Forest Ludo</div>
+          <img src="/logo.png" alt="Ludo Logo" className="hud-logo" />
+          {/* <div className="hud-title">Forest Ludo</div> */}
           {onlineState.room && (
             <div className="online-room-badge">
               Room: <strong>{onlineState.room.code}</strong>
@@ -118,6 +119,7 @@ export function LudoGame() {
         message={message}
         canRoll={canRoll}
         onRoll={roll}
+        playerConfig={playerConfig}
       />
 
       <WinOverlay winner={state.winner} onRestart={restart} />

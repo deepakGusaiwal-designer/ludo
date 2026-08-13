@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Alert02Icon, Cancel01Icon } from "hugeicons-react";
 
 export function ResetModal({ isOpen, onConfirm, onCancel }) {
   useEffect(() => {
@@ -21,9 +22,11 @@ export function ResetModal({ isOpen, onConfirm, onCancel }) {
           onClick={onCancel}
           title="Close dialog"
         >
-          ✕
+          <Cancel01Icon size={16} />
         </button>
-        <div className="glass-modal-icon">⚠️</div>
+        <div className="glass-modal-icon">
+          <Alert02Icon size={38} color="#f59e0b" />
+        </div>
         <h3 className="glass-modal-title">Reset Game?</h3>
         <p className="glass-modal-desc">
           Are you sure you want to reset all token positions back to their yards?

@@ -16,6 +16,8 @@ export function useOnlineLudo() {
     const socket = io(SERVER_URL, {
       autoConnect: true,
       transports: ["websocket", "polling"],
+      reconnectionAttempts: 3,
+      timeout: 4000,
     });
 
     socketRef.current = socket;
@@ -23,6 +25,10 @@ export function useOnlineLudo() {
     socket.on("connect", () => {
       setIsConnected(true);
       setError(null);
+    });
+
+    socket.on("connect_error", () => {
+      setIsConnected(false);
     });
 
     socket.on("disconnect", () => {

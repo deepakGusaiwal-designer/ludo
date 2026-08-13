@@ -16,10 +16,10 @@ import { colorMaterial, getMaterial } from "./materials.js";
  * scene and the rules never need to agree on array order.
  */
 export function createTokens(boardGroup) {
-  const bodyGeometry = new THREE.CylinderGeometry(0.21, 0.27, 0.42, 20);
+  const bodyGeometry = new THREE.CylinderGeometry(0.18, 0.23, 0.38, 20);
 
   const headGeometry = new THREE.SphereGeometry(
-    0.24,
+    0.20,
     16,
     8,
     0,
@@ -28,9 +28,9 @@ export function createTokens(boardGroup) {
     Math.PI / 2,
   );
 
-  const footGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.07, 20);
+  const footGeometry = new THREE.CylinderGeometry(0.24, 0.24, 0.06, 20);
 
-  const ringGeometry = new THREE.TorusGeometry(0.36, 0.05, 8, 26);
+  const ringGeometry = new THREE.TorusGeometry(0.31, 0.045, 8, 26);
 
   const ringMaterial = new THREE.MeshStandardMaterial({
     color: "#fff6cf",
@@ -52,13 +52,13 @@ export function createTokens(boardGroup) {
       const material = colorMaterial(color);
 
       const body = new THREE.Mesh(bodyGeometry, material);
-      body.position.y = 0.245;
+      body.position.y = 0.22;
       body.castShadow = true;
       body.receiveShadow = true;
       group.add(body);
 
       const head = new THREE.Mesh(headGeometry, material);
-      head.position.y = 0.455;
+      head.position.y = 0.41;
       head.castShadow = true;
       group.add(head);
 
@@ -66,7 +66,7 @@ export function createTokens(boardGroup) {
         footGeometry,
         getMaterial(COLORS[`${color}Dark`]),
       );
-      foot.position.y = 0.035;
+      foot.position.y = 0.03;
       foot.castShadow = true;
       group.add(foot);
 

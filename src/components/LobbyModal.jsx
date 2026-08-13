@@ -1,4 +1,10 @@
 import { useState } from "react";
+import {
+  Brain01Icon,
+  Cancel01Icon,
+  DiceFaces06Icon,
+  GameController01Icon,
+} from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
 import { GsapRadio } from "./GsapFormControls.jsx";
 
@@ -109,10 +115,12 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
             onClick={onCancel}
             title="Close setup"
           >
-            ✕
+            <Cancel01Icon size={16} />
           </button>
         )}
-        <div className="glass-modal-icon">🎮</div>
+        <div className="glass-modal-icon">
+          <GameController01Icon size={38} color="#34d399" />
+        </div>
         <h2 className="glass-modal-title">Game Setup & Players</h2>
         <p className="glass-modal-desc">
           Choose your game mode, active players, and computer bot difficulty:
@@ -147,9 +155,9 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
                   onChange={(e) => handleControllerChange(color, e.target.value)}
                   className="lobby-select"
                 >
-                  <option value="human">👤 Human</option>
-                  <option value="computer">🤖 Computer (AI)</option>
-                  <option value="off">❌ Disabled (Off)</option>
+                  <option value="human">Human Player</option>
+                  <option value="computer">Computer (AI)</option>
+                  <option value="off">Disabled (Off)</option>
                 </select>
               </div>
             ))}
@@ -166,7 +174,9 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
               checked={difficulty === "smart"}
               onChange={(e) => setDifficulty(e.target.value)}
             >
-              🧠 Smart Strategy
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <Brain01Icon size={14} /> Smart Strategy
+              </span>
             </GsapRadio>
             <GsapRadio
               name="difficulty"
@@ -174,7 +184,9 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
               checked={difficulty === "easy"}
               onChange={(e) => setDifficulty(e.target.value)}
             >
-              🎲 Casual Easy
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <DiceFaces06Icon size={14} /> Casual Easy
+              </span>
             </GsapRadio>
           </div>
         </div>
