@@ -36,8 +36,20 @@ export function toggleMuted() {
   return muted;
 }
 
-/** UI button click sound */
+/** Mobile Haptic Vibration Helper */
+export function vibrate(pattern = 25) {
+  if (typeof navigator !== "undefined" && navigator.vibrate) {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {
+      // Ignore if user preference / browser permission blocks vibration
+    }
+  }
+}
+
+/** UI button click sound with touch haptics */
 export function playClick() {
+  vibrate(20);
   if (muted) return;
   const ctx = getContext();
   if (!ctx) return;
@@ -62,6 +74,7 @@ export function playClick() {
 
 /** Multi-impact dice tumble and roll sound */
 export function playDiceRoll() {
+  vibrate([25, 30, 25, 45]);
   if (muted) return;
   const ctx = getContext();
   if (!ctx) return;
@@ -98,6 +111,7 @@ export function playDiceRoll() {
 
 /** Wooden piece click on each hop step with pitch scaling */
 export function playTokenHop(stepIndex = 0, totalSteps = 1) {
+  vibrate(30);
   if (muted) return;
   const ctx = getContext();
   if (!ctx) return;
@@ -126,6 +140,7 @@ export function playTokenHop(stepIndex = 0, totalSteps = 1) {
 
 /** Chime burst sound when bringing a token out of the yard on a 6 */
 export function playTokenSpawn() {
+  vibrate([40, 25, 45]);
   if (muted) return;
   const ctx = getContext();
   if (!ctx) return;
@@ -153,6 +168,7 @@ export function playTokenSpawn() {
 
 /** Retro impact zap sound when capturing an opponent token */
 export function playTokenCapture() {
+  vibrate([60, 40, 60, 40, 90]);
   if (muted) return;
   const ctx = getContext();
   if (!ctx) return;
@@ -177,6 +193,7 @@ export function playTokenCapture() {
 
 /** Flourish chime chord when reaching home finish */
 export function playTokenFinish() {
+  vibrate([50, 40, 80]);
   if (muted) return;
   const ctx = getContext();
   if (!ctx) return;

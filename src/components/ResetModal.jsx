@@ -13,8 +13,16 @@ export function ResetModal({ isOpen, onConfirm, onCancel }) {
   if (!isOpen) return null;
 
   return (
-    <div className="glass-modal-overlay" onClick={onCancel}>
-      <div className="glass-modal-card" onClick={(e) => e.stopPropagation()}>
+    <div className="glass-modal-overlay">
+      <div className="glass-modal-card">
+        <button
+          type="button"
+          className="modal-close-icon-btn"
+          onClick={onCancel}
+          title="Close dialog"
+        >
+          ✕
+        </button>
         <div className="glass-modal-icon">⚠️</div>
         <h3 className="glass-modal-title">Reset Game?</h3>
         <p className="glass-modal-desc">
