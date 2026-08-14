@@ -96,7 +96,7 @@ export class LudoScene {
     } else {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3.0));
     }
 
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -243,7 +243,7 @@ export class LudoScene {
     } else {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3.0));
     }
 
     if (this.forest) {
@@ -269,9 +269,8 @@ export class LudoScene {
 
     this.renderer.setSize(clientWidth, clientHeight);
 
-    this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.25 : 1.75),
-    );
+    const maxDpr = this.qualityTier === QUALITY_TIERS.LOW ? 1.0 : this.qualityTier === QUALITY_TIERS.MEDIUM ? 1.5 : 3.0;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr));
   }
 
   /* ------------------------------------------------------ */
