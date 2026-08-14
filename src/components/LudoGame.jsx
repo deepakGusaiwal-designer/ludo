@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Globe02Icon, RefreshIcon, Settings02Icon } from "hugeicons-react";
+import { CpuIcon, Globe02Icon, RefreshIcon, Settings02Icon } from "hugeicons-react";
 
 import { useLudoGame } from "../hooks/useLudoGame.js";
 import { useLudoScene } from "../hooks/useLudoScene.js";
@@ -9,6 +9,7 @@ import { AudioToggle } from "./AudioToggle.jsx";
 import { CameraControls } from "./CameraControls.jsx";
 import { LobbyModal } from "./LobbyModal.jsx";
 import { OnlineLobbyModal } from "./OnlineLobbyModal.jsx";
+import { QualityModal } from "./QualityModal.jsx";
 import { ResetModal } from "./ResetModal.jsx";
 import { Scoreboard } from "./Scoreboard.jsx";
 import { TurnPanel } from "./TurnPanel.jsx";
@@ -23,6 +24,7 @@ export function LudoGame() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isLobbyOpen, setIsLobbyOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
+  const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
 
   const onlineState = useOnlineLudo();
 
@@ -84,6 +86,15 @@ export function LudoGame() {
           <AudioToggle />
           <button
             type="button"
+            className="icon-hud-btn"
+            onClick={() => setIsQualityModalOpen(true)}
+            title="3D Graphics Performance Settings"
+          >
+            <CpuIcon size={16} />
+            <span className="hud-btn-text">Graphics</span>
+          </button>
+          <button
+            type="button"
             className="icon-hud-btn online-hud-btn"
             onClick={() => setIsOnlineModalOpen(true)}
             title="Play Online with Friends"
@@ -142,6 +153,12 @@ export function LudoGame() {
         onlineState={onlineState}
         onStartMatch={handleStartOnlineMatch}
         onCancel={() => setIsOnlineModalOpen(false)}
+      />
+
+      <QualityModal
+        isOpen={isQualityModalOpen}
+        onClose={() => setIsQualityModalOpen(false)}
+        sceneRef={sceneRef}
       />
     </div>
   );
