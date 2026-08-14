@@ -4,6 +4,7 @@ import { playClick } from "../game/audio.js";
 
 const CAMERA_ANGLES = [
   { id: "3d", label: "3D Perspective", icon: "🌐" },
+  { id: "2d", label: "2D Flat Board (Ultra Light)", icon: "🎯" },
   { id: "close", label: "Closest Board View", icon: "🔍" },
   { id: "top", label: "Top Overhead View", icon: "⬇️" },
   { id: "red", label: "Red Corner", icon: "🔴" },

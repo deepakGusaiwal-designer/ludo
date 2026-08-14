@@ -63,13 +63,12 @@ export function createCameraRig(camera, domElement) {
       const newDistance = getPinchDistance(p1, p2);
 
       if (initialPinchDistance > 0 && newDistance > 0) {
-        const ratio = initialPinchDistance / newDistance;
+        // Pinch In -> Zoom In (distance decreases)
+        // Spreading Out -> Zoom Out (distance increases)
+        const ratio = newDistance / initialPinchDistance;
         gsap.killTweensOf(orbit);
 
-        // Natural Pinch Zoom:
-        // Spreading fingers (newDistance > initialPinchDistance -> ratio < 1) -> distance decreases (zoom IN)
-        // Pinching together (newDistance < initialPinchDistance -> ratio > 1) -> distance increases (zoom OUT)
-        const targetDistance = orbit.distance * Math.pow(ratio, 0.6);
+        const targetDistance = orbit.distance * Math.pow(ratio, 0.65);
         orbit.distance = THREE.MathUtils.clamp(targetDistance, 6, 38);
         initialPinchDistance = newDistance;
       }
@@ -78,8 +77,8 @@ export function createCameraRig(camera, domElement) {
 
     if (!dragging) return;
 
-    // Standard Drag / Orbit controls
-    targetRotationY += (event.clientX - previousX) * 0.005;
+    // Drag finger right -> camera turns right; drag finger left -> camera turns left
+    targetRotationY -= (event.clientX - previousX) * 0.005;
     targetRotationX += (event.clientY - previousY) * 0.003;
     targetRotationX = THREE.MathUtils.clamp(targetRotationX, -0.65, 1.25);
 

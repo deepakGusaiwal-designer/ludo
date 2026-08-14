@@ -97,7 +97,7 @@ body {
   top: 18px;
   left: 20px;
   right: 20px;
-  z-index: 10;
+  z-index: 33;
   color: white;
   display: flex;
   align-items: center;
@@ -1242,7 +1242,7 @@ body {
   }
 
   .camera-dropdown-menu {
-    width: 155px;
+    width: max-content;
     right: -10px;
   }
 

@@ -375,13 +375,19 @@ export class LudoScene {
   /* ------------------------------------------------------ */
 
   setCameraAngle(mode) {
+    if (this.forest) {
+      this.forest.forest.visible = mode !== "2d";
+    }
+
     switch (mode) {
+      case "2d":
+        this.rig.setAngle(1.48, 0, 21.5, 0);
+        break;
       case "close":
       case "closest":
         this.rig.setAngle(-0.05, 0, 9.5, 2.2);
         break;
       case "top":
-      case "2d":
         this.rig.setAngle(1.15, 0, 24, 14);
         break;
       case "red":
