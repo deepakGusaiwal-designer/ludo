@@ -3,9 +3,11 @@ import {
   Add01Icon,
   Alert02Icon,
   Cancel01Icon,
+  Copy01Icon,
   Globe02Icon,
   Key01Icon,
   Sword01Icon,
+  Tick02Icon,
   UserGroupIcon,
 } from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
@@ -244,15 +246,24 @@ export function OnlineLobbyModal({
           <div className="online-room-view">
             {/* Room Code Badge */}
             <div className="room-code-card">
-              <div className="code-label">SHARE THIS ROOM CODE WITH FRIENDS:</div>
+              <div className="code-label">Share this room code with Friends:</div>
               <div className="code-display-row">
                 <span className="code-text">{room.code}</span>
                 <button
                   type="button"
-                  className="copy-btn"
+                  className={`copy-btn ${copied ? "copied" : ""}`}
                   onClick={handleCopyCode}
+                  title="Copy Room Code"
                 >
-                  {copied ? "✓ Copied!" : "📋 Copy Code"}
+                  {copied ? (
+                    <>
+                      <Tick02Icon size={15} /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy01Icon size={15} /> Copy Code
+                    </>
+                  )}
                 </button>
               </div>
             </div>
