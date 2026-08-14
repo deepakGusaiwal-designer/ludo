@@ -673,10 +673,6 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
 
   const activeTier = qualityTier === "high" ? "high" : qualityTier === "low" ? "low" : (qualityTier === "medium" || isMobile) ? "medium" : "high";
 
-  if (activeTier === "low") {
-    particles.visible = false;
-  }
-
   let treeCount = CONFIG.treeCount;
   let grassCount = CONFIG.grassCount;
   let nearBoardCount = CONFIG.nearBoardGrassCount;
@@ -1131,6 +1127,11 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
   const rainParticles = new THREE.Points(rainGeometry, rainMaterial);
   forest.add(rainParticles);
 
+  if (activeTier === "low") {
+    particles.visible = false;
+    rainParticles.visible = false;
+  }
+
   /** Gentle sway + wind wave + animal animation, called once per frame. */
   function update(time) {
     const windTime = time * 2.2;
@@ -1215,21 +1216,23 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
       }
     });
 
-    particles.rotation.y = time * 0.008;
-    particles.position.x = Math.sin(time * 0.12) * 0.5;
-    particles.position.z = Math.cos(time * 0.09) * 0.4;
+    if (activeTier !== "low") {
+      particles.rotation.y = time * 0.008;
+      particles.position.x = Math.sin(time * 0.12) * 0.5;
+      particles.position.z = Math.cos(time * 0.09) * 0.4;
 
-    // Rain falling animation
-    const rainPosArray = rainGeometry.attributes.position.array;
-    for (let i = 0; i < rainCount; i++) {
-      rainPosArray[i * 3 + 1] -= rainVelocities[i] * 0.018;
-      if (rainPosArray[i * 3 + 1] < 0) {
-        rainPosArray[i * 3 + 1] = random(18, 24);
-        rainPosArray[i * 3] = random(-28, 28);
-        rainPosArray[i * 3 + 2] = random(-28, 28);
+      // Rain falling animation
+      const rainPosArray = rainGeometry.attributes.position.array;
+      for (let i = 0; i < rainCount; i++) {
+        rainPosArray[i * 3 + 1] -= rainVelocities[i] * 0.018;
+        if (rainPosArray[i * 3 + 1] < 0) {
+          rainPosArray[i * 3 + 1] = random(18, 24);
+          rainPosArray[i * 3] = random(-28, 28);
+          rainPosArray[i * 3 + 2] = random(-28, 28);
+        }
       }
+      rainGeometry.attributes.position.needsUpdate = true;
     }
-    rainGeometry.attributes.position.needsUpdate = true;
   }
 
   function dispose() {
