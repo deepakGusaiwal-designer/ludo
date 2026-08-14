@@ -673,6 +673,10 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
 
   const activeTier = qualityTier === "high" ? "high" : qualityTier === "low" ? "low" : (qualityTier === "medium" || isMobile) ? "medium" : "high";
 
+  if (activeTier === "low") {
+    particles.visible = false;
+  }
+
   let treeCount = CONFIG.treeCount;
   let grassCount = CONFIG.grassCount;
   let nearBoardCount = CONFIG.nearBoardGrassCount;
@@ -680,23 +684,26 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
   let butterflyCount = CONFIG.butterflyCount;
   let mushroomCount = CONFIG.mushroomCount;
   let flowerCount = CONFIG.flowerCount;
+  let logCount = CONFIG.logCount;
 
   if (activeTier === "medium") {
-    treeCount = CONFIG.mobileTreeCount;
-    grassCount = CONFIG.mobileGrassCount;
-    nearBoardCount = CONFIG.mobileNearBoardGrassCount;
-    cloudCount = 8;
-    butterflyCount = 6;
-    mushroomCount = 8;
-    flowerCount = 10;
+    treeCount = 16;
+    grassCount = 50;
+    nearBoardCount = 25;
+    cloudCount = 3;
+    butterflyCount = 2;
+    mushroomCount = 5;
+    flowerCount = 6;
+    logCount = 4;
   } else if (activeTier === "low") {
-    treeCount = 15;
-    grassCount = 30;
-    nearBoardCount = 15;
-    cloudCount = 4;
-    butterflyCount = 3;
-    mushroomCount = 4;
-    flowerCount = 5;
+    treeCount = 8;
+    grassCount = 15;
+    nearBoardCount = 5;
+    cloudCount = 0;
+    butterflyCount = 0;
+    mushroomCount = 2;
+    flowerCount = 3;
+    logCount = 2;
   }
 
   for (let i = 0; i < treeCount; i++) {
@@ -706,7 +713,7 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
     forest.add(tree);
   }
 
-  const bushCount = activeTier === "low" ? 15 : activeTier === "medium" ? 25 : CONFIG.bushCount;
+  const bushCount = activeTier === "low" ? 6 : activeTier === "medium" ? 15 : CONFIG.bushCount;
   for (let i = 0; i < bushCount; i++) {
     const bush = createBush();
     const { x, z } = forestPosition();
@@ -715,7 +722,7 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
     forest.add(bush);
   }
 
-  const rockCount = activeTier === "low" ? 15 : activeTier === "medium" ? 25 : CONFIG.rockCount;
+  const rockCount = activeTier === "low" ? 5 : activeTier === "medium" ? 12 : CONFIG.rockCount;
   for (let i = 0; i < rockCount; i++) {
     const rock = createRock();
     const { x, z } = forestPosition();
@@ -741,7 +748,7 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
     forest.add(grass);
   }
 
-  for (let i = 0; i < CONFIG.logCount; i++) {
+  for (let i = 0; i < logCount; i++) {
     const log = createLog();
     const { x, z } = forestPosition();
     log.position.set(x, 0.25, z);
@@ -751,7 +758,7 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
   }
 
   // Deer
-  const deerCount = activeTier === "low" ? 1 : activeTier === "medium" ? 2 : CONFIG.deerCount;
+  const deerCount = activeTier === "low" ? 0 : activeTier === "medium" ? 1 : CONFIG.deerCount;
   for (let i = 0; i < deerCount; i++) {
     const deer = createDeer();
     const { x, z } = forestPosition();
@@ -761,7 +768,7 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
   }
 
   // Rabbits
-  const rabbitCount = activeTier === "low" ? 2 : activeTier === "medium" ? 4 : CONFIG.rabbitCount;
+  const rabbitCount = activeTier === "low" ? 0 : activeTier === "medium" ? 2 : CONFIG.rabbitCount;
   for (let i = 0; i < rabbitCount; i++) {
     const rabbit = createRabbit();
     const { x, z } = forestPosition();
