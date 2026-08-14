@@ -63,9 +63,8 @@ export function createCameraRig(camera, domElement) {
       const newDistance = getPinchDistance(p1, p2);
 
       if (initialPinchDistance > 0 && newDistance > 0) {
-        // Pinch In -> Zoom In (distance decreases)
-        // Spreading Out -> Zoom Out (distance increases)
-        const ratio = newDistance / initialPinchDistance;
+        // Inverted Pinch Zoom: Spreading out -> Zoom IN; Pinching in -> Zoom OUT
+        const ratio = initialPinchDistance / newDistance;
         gsap.killTweensOf(orbit);
 
         const targetDistance = orbit.distance * Math.pow(ratio, 0.65);
