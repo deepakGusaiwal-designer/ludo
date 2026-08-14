@@ -6,7 +6,13 @@ import {
   GameController01Icon,
 } from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
-import { GsapRadio } from "./GsapFormControls.jsx";
+import { GsapRadio, GsapSelect } from "./GsapFormControls.jsx";
+
+const CONTROLLER_OPTIONS = [
+  { value: "human", label: "👤 Human Player" },
+  { value: "computer", label: "🤖 Computer (AI)" },
+  { value: "off", label: "❌ Disabled (Off)" },
+];
 
 const PRESETS = [
   {
@@ -150,15 +156,12 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
                 <div className={`lobby-color-badge ${color}`}>
                   {labelFor(color)}
                 </div>
-                <select
+                <GsapSelect
                   value={controllers[color] || "human"}
-                  onChange={(e) => handleControllerChange(color, e.target.value)}
-                  className="lobby-select"
-                >
-                  <option value="human">Human Player</option>
-                  <option value="computer">Computer (AI)</option>
-                  <option value="off">Disabled (Off)</option>
-                </select>
+                  onChange={(val) => handleControllerChange(color, val)}
+                  options={CONTROLLER_OPTIONS}
+                  className="lobby-select-gsap"
+                />
               </div>
             ))}
           </div>

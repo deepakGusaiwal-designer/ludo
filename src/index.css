@@ -681,6 +681,106 @@ body {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* —— GSAP Animated Select Dropdown —— */
+
+.gsap-select-container {
+  position: relative;
+  width: 100%;
+  display: inline-block;
+}
+
+.gsap-select-trigger {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(15, 28, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.gsap-select-trigger:hover,
+.gsap-select-trigger.open {
+  background: rgba(15, 28, 23, 0.9);
+  border-color: rgba(52, 211, 153, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(52, 211, 153, 0.2);
+}
+
+.gsap-select-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gsap-select-arrow {
+  font-size: 10px;
+  color: #34d399;
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+}
+
+.gsap-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(15, 28, 23, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 14px rgba(52, 211, 153, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gsap-select-item {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.gsap-select-item:hover {
+  background: rgba(52, 211, 153, 0.15);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.gsap-select-item.active {
+  background: rgba(52, 211, 153, 0.22);
+  color: #34d399;
+  font-weight: 700;
+}
+
+.gsap-select-check {
+  color: #34d399;
+  font-weight: 700;
+}
+
 .glass-modal-actions {
   margin-top: 26px;
   display: flex;

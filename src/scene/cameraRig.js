@@ -65,8 +65,9 @@ export function createCameraRig(camera, domElement) {
 
       if (Math.abs(delta) > 1.5) {
         gsap.killTweensOf(orbit);
+        // Inverted Pinch Zoom: pinching out zooms out (+delta), pinching in zooms in (-delta)
         orbit.distance = THREE.MathUtils.clamp(
-          orbit.distance - delta * 0.05,
+          orbit.distance + delta * 0.05,
           6,
           38,
         );
@@ -77,8 +78,9 @@ export function createCameraRig(camera, domElement) {
 
     if (!dragging) return;
 
-    targetRotationY += (event.clientX - previousX) * 0.005;
-    targetRotationX += (event.clientY - previousY) * 0.003;
+    // Inverted Drag / Orbit controls (Opposite of default)
+    targetRotationY -= (event.clientX - previousX) * 0.005;
+    targetRotationX -= (event.clientY - previousY) * 0.003;
     targetRotationX = THREE.MathUtils.clamp(targetRotationX, -0.65, 1.25);
 
     previousX = event.clientX;
@@ -106,8 +108,9 @@ export function createCameraRig(camera, domElement) {
     event.preventDefault();
     gsap.killTweensOf(orbit);
 
+    // Inverted Mouse Wheel Zoom
     orbit.distance = THREE.MathUtils.clamp(
-      orbit.distance + event.deltaY * 0.012,
+      orbit.distance - event.deltaY * 0.012,
       6,
       38,
     );

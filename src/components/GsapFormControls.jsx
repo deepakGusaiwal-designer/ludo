@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState  } from "react";
 import gsap from "gsap";
 
 /**
@@ -149,5 +149,92 @@ export function GsapCheckbox({ checked, onChange, label, children }) {
       </span>
       <span className="gsap-checkbox-text">{label || children}</span>
     </label>
+  );
+}
+
+/**
+ * Animated GSAP Dropdown Select block with spring physics & custom glass style.
+ */
+export function GsapSelect({ value, onChange, options = [], className = "" }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const arrowRef = useRef(null);
+
+  const selectedOption = options.find((opt) => opt.value === value) || options[0];
+
+  useEffect(() => {
+    if (!menuRef.current || !arrowRef.current) return;
+
+    if (isOpen) {
+      gsap.fromTo(
+        menuRef.current,
+        { opacity: 0, y: -8, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.22, ease: "back.out(1.5)" },
+      );
+      gsap.to(arrowRef.current, { rotate: 180, duration: 0.2 });
+    } else {
+      gsap.to(arrowRef.current, { rotate: 0, duration: 0.2 });
+    }
+  }, [isOpen]);
+
+  const handleSelect = (val) => {
+    if (triggerRef.current) {
+      gsap.to(triggerRef.current, {
+        scale: 0.97,
+        duration: 0.1,
+        yoyo: true,
+        repeat: 1,
+      });
+    }
+    onChange(val);
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target) &&
+        menuRef.current &&
+        !menuRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`gsap-select-container ${className}`}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`gsap-select-trigger ${isOpen ? "open" : ""}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="gsap-select-label">{selectedOption?.label || value}</span>
+        <span ref={arrowRef} className="gsap-select-arrow">
+          ▼
+        </span>
+      </button>
+
+      {isOpen && (
+        <div ref={menuRef} className="gsap-select-menu">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`gsap-select-item ${option.value === value ? "active" : ""}`}
+              onClick={() => handleSelect(option.value)}
+            >
+              <span>{option.label}</span>
+              {option.value === value && <span className="gsap-select-check">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
