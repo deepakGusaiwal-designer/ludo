@@ -2,6 +2,8 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none;
 }
 
 html,
@@ -11,6 +13,9 @@ body,
   height: 100%;
   overflow: hidden;
   background: #0f1c17;
+  -webkit-tap-highlight-color: transparent !important;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 body,
@@ -25,6 +30,7 @@ h4,
 h5,
 h6 {
   font-family: "Plus Jakarta Sans", "Open Sans", "Google Sans", system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 body {
