@@ -1,12 +1,6 @@
 /**
  * Performance Manager & Hardware Tier Detector
- * 
- * Automatically detects device GPU & CPU tier, monitors live FPS,
- * and provides quality preset levels ('high', 'medium', 'low', 'auto')
- * to ensure smooth 60 FPS performance on lower-end mobile devices.
  */
-
-const STORAGE_KEY = "ludo_graphics_quality";
 
 export const QUALITY_TIERS = {
   HIGH: "high",
@@ -15,38 +9,43 @@ export const QUALITY_TIERS = {
   AUTO: "auto",
 };
 
-/** Detect hardware capabilities */
+const STORAGE_KEY = "ludo_graphics_quality";
+
 export function detectHardwareTier() {
+  if (typeof window === "undefined") return "high";
   const isMobile = window.innerWidth < 768;
-  const memory = navigator.deviceMemory || 4; // GB
-  const cores = navigator.hardwareConcurrency || 4;
+  const memory = (typeof navigator !== "undefined" && navigator.deviceMemory) || 4;
+  const cores = (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
 
   if (isMobile && (memory <= 2 || cores <= 2)) {
-    return QUALITY_TIERS.LOW;
+    return "low";
   }
   if (isMobile) {
-    return QUALITY_TIERS.MEDIUM;
+    return "medium";
   }
-  return QUALITY_TIERS.HIGH;
+  return "high";
 }
 
 export function getSavedQualityPreference() {
+  if (typeof localStorage === "undefined") return "auto";
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved && Object.values(QUALITY_TIERS).includes(saved)) {
+  if (saved === "high" || saved === "medium" || saved === "low" || saved === "auto") {
     return saved;
   }
-  return QUALITY_TIERS.AUTO;
+  return "auto";
 }
 
 export function saveQualityPreference(tier) {
-  localStorage.setItem(STORAGE_KEY, tier);
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, tier);
+  }
 }
 
 export class PerformanceMonitor {
   constructor(onDownscale) {
     this.onDownscale = onDownscale;
     this.frameCount = 0;
-    this.lastTime = performance.now();
+    this.lastTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.lowFpsDuration = 0;
     this.enabled = true;
   }
@@ -57,7 +56,6 @@ export class PerformanceMonitor {
     this.frameCount++;
     const delta = time - this.lastTime;
 
-    // Check FPS every 1 second (1000ms)
     if (delta >= 1000) {
       const fps = (this.frameCount * 1000) / delta;
       this.frameCount = 0;
@@ -65,7 +63,6 @@ export class PerformanceMonitor {
 
       if (fps < 30) {
         this.lowFpsDuration += 1;
-        // If FPS stays below 30 for 3 seconds, auto-downscale
         if (this.lowFpsDuration >= 3) {
           this.lowFpsDuration = 0;
           this.enabled = false;
