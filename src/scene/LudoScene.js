@@ -24,6 +24,13 @@ import { createForest } from "./forest.js";
 import { createTokens } from "./tokens.js";
 import { disposeMaterials } from "./materials.js";
 
+import {
+  detectHardwareTier,
+  getSavedQualityPreference,
+  PerformanceMonitor,
+  QUALITY_TIERS,
+} from "./performanceManager.js";
+
 /**
  * Owns everything three.js. React never touches this directly
  * beyond mounting it and calling its methods; the rules live
@@ -44,6 +51,10 @@ export class LudoScene {
     this.handlers = { tokenClick: null, diceClick: null };
 
     const isMobile = window.innerWidth < 768;
+
+    const savedQuality = getSavedQualityPreference();
+    const effectiveTier = savedQuality === QUALITY_TIERS.AUTO ? detectHardwareTier() : savedQuality;
+    this.qualityTier = effectiveTier;
 
     /* scene */
 
@@ -69,19 +80,25 @@ export class LudoScene {
     /* renderer */
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: effectiveTier !== QUALITY_TIERS.LOW,
       powerPreference: "high-performance",
     });
 
     this.renderer.setSize(container.clientWidth, container.clientHeight);
 
-    // High-DPI sharp rendering for mobile retina screens
-    this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, isMobile ? 2.0 : 1.75),
-    );
+    if (effectiveTier === QUALITY_TIERS.LOW) {
+      this.renderer.shadowMap.enabled = false;
+      this.renderer.setPixelRatio(1.0);
+    } else if (effectiveTier === QUALITY_TIERS.MEDIUM) {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.BasicShadowMap;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    } else {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+    }
 
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = isMobile ? 1.02 : 0.95;
@@ -99,9 +116,9 @@ export class LudoScene {
     const sun = new THREE.DirectionalLight("#ffd8a8", 2.2);
 
     sun.position.set(-15, 28, 12);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
+    sun.castShadow = effectiveTier !== QUALITY_TIERS.LOW;
+    sun.shadow.mapSize.width = effectiveTier === QUALITY_TIERS.HIGH ? 2048 : 1024;
+    sun.shadow.mapSize.height = effectiveTier === QUALITY_TIERS.HIGH ? 2048 : 1024;
     sun.shadow.camera.left = -25;
     sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25;
@@ -126,7 +143,13 @@ export class LudoScene {
 
     this.effects = createEffectsSystem(this.scene);
 
-    this.forest = createForest({ isMobile });
+    this.forest = createForest({ isMobile, qualityTier: effectiveTier });
+
+    this.perfMonitor = new PerformanceMonitor(() => {
+      if (this.qualityTier !== QUALITY_TIERS.LOW) {
+        this.setQualityTier(QUALITY_TIERS.LOW);
+      }
+    });
 
     this.scene.add(this.forest.forest);
     this.scene.add(this.forest.ground);
@@ -191,6 +214,10 @@ export class LudoScene {
 
     this.frame = requestAnimationFrame(this.renderLoop);
 
+    if (this.perfMonitor) {
+      this.perfMonitor.tick(performance.now());
+    }
+
     const delta = this.clock.getDelta();
 
     this.forest.update(this.clock.getElapsedTime());
@@ -200,6 +227,36 @@ export class LudoScene {
     this.rig.update();
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  setQualityTier(tier) {
+    this.qualityTier = tier;
+    const isMobile = window.innerWidth < 768;
+
+    if (tier === QUALITY_TIERS.LOW) {
+      this.renderer.shadowMap.enabled = false;
+      this.renderer.setPixelRatio(1.0);
+    } else if (tier === QUALITY_TIERS.MEDIUM) {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.BasicShadowMap;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    } else {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+    }
+
+    if (this.forest) {
+      this.scene.remove(this.forest.forest);
+      this.scene.remove(this.forest.ground);
+      this.scene.remove(this.forest.particles);
+      this.forest.dispose();
+
+      this.forest = createForest({ isMobile, qualityTier: tier });
+      this.scene.add(this.forest.forest);
+      this.scene.add(this.forest.ground);
+      this.scene.add(this.forest.particles);
+    }
   }
 
   onResize() {
