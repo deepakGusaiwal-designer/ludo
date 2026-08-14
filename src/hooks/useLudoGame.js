@@ -15,6 +15,7 @@ import {
   evaluateRoll,
   tokenById,
 } from "../game/rules.js";
+import { getFairRoll } from "../game/fairDice.js";
 
 const FORFEIT_PAUSE = 1200;
 
@@ -218,7 +219,9 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
 
     publish();
 
-    const value = await scene.rollDice(rollValue());
+    const value = await scene.rollDice(
+      getFairRoll(activeColor, m.state.tokens),
+    );
 
     if (onlineState?.room && onlineState.myColor === activeColor) {
       onlineState.sendRollDice(activeColor, value);

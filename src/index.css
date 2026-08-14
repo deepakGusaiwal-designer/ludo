@@ -1281,3 +1281,11 @@ body {
     height: 8px;
   }
 }
+
+.online-status-bar {
+  font-size: 12px;
+  margin-block: 15px;
+}
+.mt-2 {
+  margin-block-start: 0.5rem;
+}

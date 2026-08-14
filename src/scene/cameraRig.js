@@ -61,16 +61,16 @@ export function createCameraRig(camera, domElement) {
     if (activePointers.size >= 2) {
       const [p1, p2] = Array.from(activePointers.values());
       const newDistance = getPinchDistance(p1, p2);
-      const delta = newDistance - initialPinchDistance;
 
-      if (Math.abs(delta) > 1.5) {
+      if (initialPinchDistance > 0 && newDistance > 0) {
+        const ratio = initialPinchDistance / newDistance;
         gsap.killTweensOf(orbit);
-        // Inverted Pinch Zoom only
-        orbit.distance = THREE.MathUtils.clamp(
-          orbit.distance + delta * 0.05,
-          6,
-          38,
-        );
+
+        // Natural Pinch Zoom:
+        // Spreading fingers (newDistance > initialPinchDistance -> ratio < 1) -> distance decreases (zoom IN)
+        // Pinching together (newDistance < initialPinchDistance -> ratio > 1) -> distance increases (zoom OUT)
+        const targetDistance = orbit.distance * Math.pow(ratio, 0.6);
+        orbit.distance = THREE.MathUtils.clamp(targetDistance, 6, 38);
         initialPinchDistance = newDistance;
       }
       return;

@@ -150,7 +150,7 @@ export function OnlineLobbyModal({
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group mt-2">
               <label className="lobby-section-title">Match Mode:</label>
               <div className="lobby-radio-group" style={{ marginTop: "6px" }}>
                 <GsapRadio
@@ -209,7 +209,7 @@ export function OnlineLobbyModal({
                 placeholder="Enter your name"
               />
             </div>
-            <div className="form-group">
+            <div className="form-group mt-2">
               <label className="lobby-section-title">Enter 5-Character Room Code:</label>
               <input
                 type="text"
