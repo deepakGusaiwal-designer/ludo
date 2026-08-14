@@ -15,9 +15,10 @@ export function useOnlineLudo() {
   useEffect(() => {
     const socket = io(SERVER_URL, {
       autoConnect: true,
-      transports: ["websocket", "polling"],
-      reconnectionAttempts: 3,
-      timeout: 4000,
+      transports: ["polling", "websocket"],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      timeout: 10000,
     });
 
     socketRef.current = socket;
