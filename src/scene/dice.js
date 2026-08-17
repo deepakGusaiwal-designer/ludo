@@ -1,10 +1,6 @@
 import * as THREE from "three";
-
 import gsap from "gsap";
-
 import { COLORS } from "../game/constants.js";
-
-import { getMaterial } from "./materials.js";
 
 const PIP_LAYOUT = {
   1: [[0, 0]],
@@ -41,14 +37,9 @@ const PIP_LAYOUT = {
 };
 
 /**
- * Face layout on the cube:
- *
+ * Face layout on procedural cube:
  *   +Z = 1   -Z = 6   +X = 2
  *   -X = 5   +Y = 3   -Y = 4
- *
- * The camera looks down at the board, so the value a player
- * reads is whichever face points at +Y. These rotations bring
- * the rolled face to the top.
  */
 const FACE_UP_ROTATION = {
   1: { x: -Math.PI / 2, y: 0, z: 0 },
@@ -59,56 +50,12 @@ const FACE_UP_ROTATION = {
   6: { x: Math.PI / 2, y: 0, z: 0 },
 };
 
-const FACE_OFFSET = 0.632;
-
-const PIP_SCALE = 0.27;
-
 const randomInt = (min, max) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
-/**
- * Nearest equivalent angle at or above `from`, so the dice
- * always settles by spinning forwards rather than unwinding.
- */
-function forwardAngle(from, target) {
-  const turn = Math.PI * 2;
-
-  return target + Math.ceil((from - target) / turn) * turn;
-}
-
-function createRoundedCubeGeometry(size = 1.25, radius = 0.14) {
-  const shape = new THREE.Shape();
-  const half = size / 2;
-  const r = Math.min(radius, half);
-  shape.moveTo(-half + r, -half);
-  shape.lineTo(half - r, -half);
-  shape.quadraticCurveTo(half, -half, half, -half + r);
-  shape.lineTo(half, half - r);
-  shape.quadraticCurveTo(half, half, half - r, half);
-  shape.lineTo(-half + r, half);
-  shape.quadraticCurveTo(-half, half, -half, half - r);
-  shape.lineTo(-half, -half + r);
-  shape.quadraticCurveTo(-half, -half, -half + r, -half);
-
-  const extrudeSettings = {
-    depth: size - r * 2,
-    bevelEnabled: true,
-    bevelSegments: 5,
-    steps: 1,
-    bevelSize: r,
-    bevelThickness: r,
-    curveSegments: 12,
-  };
-  const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-  geom.center();
-  return geom;
-}
-
 export function createDice() {
   const diceGroup = new THREE.Group();
-
   diceGroup.name = "Dice";
-
   diceGroup.position.set(7, 1.2, -0.2);
 
   const bodyGeometry = new THREE.BoxGeometry(1.25, 1.25, 1.25, 6, 6, 6);
@@ -128,7 +75,6 @@ export function createDice() {
   const pipGeometry = new THREE.CylinderGeometry(0.095, 0.095, 0.03, 16);
   const pipRingGeometry = new THREE.TorusGeometry(0.105, 0.016, 10, 24);
 
-  // Classic crisp dark pips (dots)
   const pipMaterial = new THREE.MeshStandardMaterial({
     color: "#111116",
     roughness: 0.1,
@@ -175,22 +121,18 @@ export function createDice() {
     diceGroup.add(faceGroup);
   });
 
-  // show a 1 before the first roll
+  // Show a 1 before the first roll
   const initial = FACE_UP_ROTATION[1];
-
   diceGroup.rotation.set(initial.x, initial.y, initial.z);
 
-  /* a colored disc under the dice showing whose turn it is */
-
+  /* A colored disc under the dice showing whose turn it is */
   const discMaterial = new THREE.MeshStandardMaterial({
     color: COLORS.red,
     roughness: 0.55,
   });
 
   const discGeometry = new THREE.CylinderGeometry(0.9, 0.9, 0.05, 32);
-
   const turnDisc = new THREE.Mesh(discGeometry, discMaterial);
-
   turnDisc.position.set(diceGroup.position.x, 0.03, diceGroup.position.z);
   turnDisc.receiveShadow = true;
 
@@ -217,16 +159,24 @@ export function createDice() {
     gsap.killTweensOf(diceGroup.rotation);
     gsap.killTweensOf(diceGroup.position);
 
-    const target = FACE_UP_ROTATION[value];
+    const targetRot = FACE_UP_ROTATION[value] || FACE_UP_ROTATION[1];
+    const targetEuler = new THREE.Euler(targetRot.x, targetRot.y, targetRot.z, "XYZ");
+    const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
 
-    // Calculate final multi-turn rotations upfront for seamless deceleration
-    const finalX = forwardAngle(diceGroup.rotation.x + Math.PI * randomInt(4, 6), target.x);
-    const finalY = forwardAngle(diceGroup.rotation.y + Math.PI * randomInt(4, 6), target.y);
-    const finalZ = forwardAngle(diceGroup.rotation.z + Math.PI * randomInt(3, 5), target.z);
+    const startQuat = diceGroup.quaternion.clone();
+
+    // Generate random multi-turn tumble quaternion
+    const tumbleAxis = new THREE.Vector3(
+      randomInt(1, 3) * (Math.random() < 0.5 ? 1 : -1),
+      randomInt(1, 3) * (Math.random() < 0.5 ? 1 : -1),
+      randomInt(1, 3) * (Math.random() < 0.5 ? 1 : -1),
+    ).normalize();
+    const tumbleTurns = randomInt(2, 4) * Math.PI * 2;
 
     return new Promise((resolve) => {
       const timeline = gsap.timeline({
         onComplete: () => {
+          diceGroup.quaternion.copy(targetQuat);
           startIdle();
           resolve(value);
         },
@@ -258,15 +208,24 @@ export function createDice() {
         ease: "bounce.out",
       });
 
-      // Single continuous rotation timeline covering the entire throw duration (0.94s)
+      // Quaternion SLERP animation
+      const rotProgress = { progress: 0 };
       timeline.to(
-        diceGroup.rotation,
+        rotProgress,
         {
-          x: finalX,
-          y: finalY,
-          z: finalZ,
+          progress: 1,
           duration: 0.94,
           ease: "power3.out",
+          onUpdate: () => {
+            const p = rotProgress.progress;
+            diceGroup.quaternion.slerpQuaternions(startQuat, targetQuat, p);
+
+            const remainingSpin = (1 - p) * tumbleTurns;
+            if (remainingSpin > 0.001) {
+              const currentTumble = new THREE.Quaternion().setFromAxisAngle(tumbleAxis, remainingSpin);
+              diceGroup.quaternion.multiply(currentTumble);
+            }
+          },
         },
         0,
       );

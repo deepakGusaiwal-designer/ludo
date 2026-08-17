@@ -61,10 +61,11 @@ export class LudoScene {
 
     this.scene = new THREE.Scene();
 
-    const skyColor = new THREE.Color("#203127");
+    // Warm golden hour twilight sky
+    const skyColor = new THREE.Color("#261c14");
     this.scene.background = skyColor;
 
-    // Atmospheric forest fog
+    // Atmospheric warm golden fog
     this.scene.fog = new THREE.Fog(skyColor, isMobile ? 26 : 20, isMobile ? 75 : 60);
 
     /* camera */
@@ -102,19 +103,21 @@ export class LudoScene {
 
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = isMobile ? 1.02 : 0.95;
+    this.renderer.toneMappingExposure = isMobile ? 1.05 : 0.98;
 
     container.appendChild(this.renderer.domElement);
 
-    /* lighting */
+    /* lighting - Warm Golden Glow Theme */
 
-    this.scene.add(new THREE.HemisphereLight("#c8d6c5", "#1b281f", isMobile ? 1.4 : 1.25));
+    // Warm golden sky & earth hemisphere light
+    this.scene.add(new THREE.HemisphereLight("#ffe0b2", "#3a281a", isMobile ? 1.5 : 1.35));
 
-    // Cozy atmospheric ambient fill light
-    const ambient = new THREE.AmbientLight("#d4c4a8", isMobile ? 0.50 : 0.42);
+    // Cozy radiant golden ambient fill light
+    const ambient = new THREE.AmbientLight("#ffecb3", isMobile ? 0.58 : 0.50);
     this.scene.add(ambient);
 
-    const sun = new THREE.DirectionalLight("#ffd8a8", 2.2);
+    // Radiant golden directional sun light
+    const sun = new THREE.DirectionalLight("#ffc266", 2.5);
     this.sunLight = sun;
 
     sun.position.set(-15, 28, 12);
@@ -131,13 +134,13 @@ export class LudoScene {
 
     this.scene.add(sun);
 
-    // Cool blue-green fill from opposite side for forest depth
-    const fill = new THREE.DirectionalLight("#a4c8b0", 0.6);
+    // Warm golden-amber fill from opposite side
+    const fill = new THREE.DirectionalLight("#ffd180", 0.75);
     fill.position.set(12, 10, -14);
     this.scene.add(fill);
 
-    // Warm ground bounce light
-    const bounce = new THREE.PointLight("#d4a96a", 0.5, 40);
+    // Radiant golden ground bounce light
+    const bounce = new THREE.PointLight("#ffab40", 0.85, 45);
     bounce.position.set(0, 0.5, 0);
     this.scene.add(bounce);
 

@@ -157,7 +157,10 @@ export function createTokens(boardGroup) {
 
             // Jacket condition: main coat body & sleeves
             const isJacket = minY >= 1.00 && maxY <= 2.18 && height >= 0.90;
-            const isFace = minY >= 2.00;
+            // Hair condition: top of head hair submeshes
+            const isHair = minY >= 1.80 && maxY >= 2.45;
+            // Face / Skin condition: face area
+            const isFace = minY >= 2.00 && !isHair;
 
             // Only main outer jacket/pants cast shadows to save 75%+ shadow render overhead
             child.castShadow = isJacket || minY <= 0.8;
@@ -174,9 +177,18 @@ export function createTokens(boardGroup) {
                   mat.color = new THREE.Color(teamColorHex);
                   mat.emissive = new THREE.Color(teamColorHex);
                   mat.emissiveIntensity = 0.18;
+                } else if (isHair) {
+                  // Jet Black Hair
+                  mat.color = new THREE.Color("#0a0a0c");
+                  mat.emissive = new THREE.Color("#000000");
+                  mat.emissiveIntensity = 0;
+                  mat.roughness = 0.65;
                 } else if (isFace) {
-                  mat.emissive = new THREE.Color("#ffe082");
-                  mat.emissiveIntensity = 0.35;
+                  // Radiant fair skin tone
+                  mat.color = new THREE.Color("#fde6d8");
+                  mat.emissive = new THREE.Color("#ffd8c7");
+                  mat.emissiveIntensity = 0.22;
+                  mat.roughness = 0.40;
                 }
                 loader._materialCache.set(cacheKey, mat);
               }
