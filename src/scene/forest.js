@@ -9,8 +9,8 @@ const CONFIG = {
   treeCount: 42,
   bushCount: 45,
   rockCount: 40,
-  grassCount: 300,
-  nearBoardGrassCount: 150,
+  grassCount: 60,
+  nearBoardGrassCount: 25,
   logCount: 7,
 
   deerCount: 4,
@@ -19,9 +19,9 @@ const CONFIG = {
   mushroomCount: 15,
   flowerCount: 20,
 
-  mobileTreeCount: 25,
-  mobileGrassCount: 120,
-  mobileNearBoardGrassCount: 65,
+  mobileTreeCount: 18,
+  mobileGrassCount: 25,
+  mobileNearBoardGrassCount: 10,
 };
 
 const PALETTE = {
@@ -350,7 +350,7 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
 
     const material = getMaterial(pick(PALETTE.grass));
 
-    for (let i = 0, count = randomInt(6, 11); i < count; i++) {
+    for (let i = 0, count = randomInt(3, 5); i < count; i++) {
       const blade = new THREE.Mesh(geometries.grass, material);
 
       blade.position.set(random(-0.35, 0.35), 0.25, random(-0.35, 0.35));
@@ -684,8 +684,8 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
 
   if (activeTier === "medium") {
     treeCount = 16;
-    grassCount = 50;
-    nearBoardCount = 25;
+    grassCount = 20;
+    nearBoardCount = 8;
     cloudCount = 3;
     butterflyCount = 2;
     mushroomCount = 5;
@@ -693,8 +693,8 @@ export function createForest({ isMobile, qualityTier = "auto" }) {
     logCount = 4;
   } else if (activeTier === "low") {
     treeCount = 8;
-    grassCount = 15;
-    nearBoardCount = 5;
+    grassCount = 8;
+    nearBoardCount = 3;
     cloudCount = 0;
     butterflyCount = 0;
     mushroomCount = 2;

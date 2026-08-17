@@ -93,11 +93,11 @@ export class LudoScene {
     } else if (effectiveTier === QUALITY_TIERS.MEDIUM) {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.BasicShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
     } else {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3.0));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
     }
 
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -119,8 +119,8 @@ export class LudoScene {
 
     sun.position.set(-15, 28, 12);
     sun.castShadow = effectiveTier !== QUALITY_TIERS.LOW;
-    sun.shadow.mapSize.width = effectiveTier === QUALITY_TIERS.HIGH ? 2048 : 1024;
-    sun.shadow.mapSize.height = effectiveTier === QUALITY_TIERS.HIGH ? 2048 : 1024;
+    sun.shadow.mapSize.width = effectiveTier === QUALITY_TIERS.HIGH ? 1024 : 512;
+    sun.shadow.mapSize.height = effectiveTier === QUALITY_TIERS.HIGH ? 1024 : 512;
     sun.shadow.camera.left = -25;
     sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25;
