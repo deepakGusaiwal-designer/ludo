@@ -79,6 +79,26 @@ function createNoiseBuffer(ctx, seconds = 4) {
   return buffer;
 }
 
+function createBonfireBuffer(ctx, seconds = 5) {
+  const bufferSize = ctx.sampleRate * seconds;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    // Generate organic bonfire wood pop crackles
+    if (Math.random() < 0.0025) {
+      const popLen = Math.floor(ctx.sampleRate * (0.006 + Math.random() * 0.015));
+      const popAmp = 0.15 + Math.random() * 0.35;
+      for (let j = 0; j < popLen && i + j < bufferSize; j++) {
+        const t = j / popLen;
+        data[i + j] += (Math.random() * 2 - 1) * popAmp * Math.exp(-t * 8);
+      }
+      i += popLen;
+    }
+  }
+  return buffer;
+}
+
 export function startForestAmbience() {
   if (muted || (ambienceNode && ambienceNode.active)) return;
   const ctx = getContext();
@@ -88,45 +108,32 @@ export function startForestAmbience() {
   ambienceNode = { active: true };
 
   const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.28, ctx.currentTime);
+  masterGain.gain.setValueAtTime(0.18, ctx.currentTime);
 
-  // 1. Bonfire Crackle Generator (Warm Wood Crackles)
-  const scheduleCrackle = () => {
-    if (muted || !ambienceNode) return;
-    const now = ctx.currentTime;
-    const popOsc = ctx.createOscillator();
-    const popGain = ctx.createGain();
-    const popFilter = ctx.createBiquadFilter();
+  // 1. Hardware-Accelerated Bonfire Wood Crackle (Zero GC Overhead)
+  const crackleBuffer = createBonfireBuffer(ctx, 5);
+  const crackleSource = ctx.createBufferSource();
+  crackleSource.buffer = crackleBuffer;
+  crackleSource.loop = true;
 
-    popOsc.type = "sawtooth";
-    const freq = 500 + Math.random() * 2800;
-    popOsc.frequency.setValueAtTime(freq, now);
+  const crackleFilter = ctx.createBiquadFilter();
+  crackleFilter.type = "bandpass";
+  crackleFilter.frequency.value = 1800;
+  crackleFilter.Q.value = 1.8;
 
-    popFilter.type = "bandpass";
-    popFilter.frequency.setValueAtTime(freq, now);
-    popFilter.Q.value = 2.8;
+  const crackleGain = ctx.createGain();
+  crackleGain.gain.value = 0.7;
 
-    const vol = 0.08 + Math.random() * 0.16;
-    popGain.gain.setValueAtTime(vol, now);
-    popGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.022);
-
-    popOsc.connect(popFilter);
-    popFilter.connect(popGain);
-    popGain.connect(masterGain);
-
-    popOsc.start(now);
-    popOsc.stop(now + 0.025);
-
-    const nextDelay = 80 + Math.random() * 200;
-    crackleTimer = setTimeout(scheduleCrackle, nextDelay);
-  };
-  scheduleCrackle();
+  crackleSource.connect(crackleFilter);
+  crackleFilter.connect(crackleGain);
+  crackleGain.connect(masterGain);
+  crackleSource.start();
 
   // 2. Crisp Night Cricket Chirp Sounds
   const scheduleCricket = () => {
     if (muted || !ambienceNode) return;
     const now = ctx.currentTime;
-    const pulses = 3 + Math.floor(Math.random() * 4);
+    const pulses = 3 + Math.floor(Math.random() * 3);
 
     for (let i = 0; i < pulses; i++) {
       const osc = ctx.createOscillator();
@@ -134,7 +141,7 @@ export function startForestAmbience() {
       osc.type = "sine";
       osc.frequency.setValueAtTime(4500 + Math.random() * 400, now + i * 0.045);
 
-      gain.gain.setValueAtTime(0.08, now + i * 0.045);
+      gain.gain.setValueAtTime(0.06, now + i * 0.045);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.045 + 0.035);
 
       osc.connect(gain);
@@ -144,7 +151,7 @@ export function startForestAmbience() {
       osc.stop(now + i * 0.045 + 0.04);
     }
 
-    const nextDelay = 2500 + Math.random() * 4500;
+    const nextDelay = 3500 + Math.random() * 5000;
     cricketTimer = setTimeout(scheduleCricket, nextDelay);
   };
   scheduleCricket();

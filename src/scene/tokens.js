@@ -143,40 +143,44 @@ export function createTokens(boardGroup) {
 
         const teamColorHex = COLORS[color];
 
-        characterInstance.traverse((child) => {
+        // Shared material cache per team color to avoid 384 unique material clones
+        if (!loader._materialCache) loader._materialCache = new Map();
+
+        characterInstance.traverse((child, subIdx) => {
           if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
+            // Compute geometry bounding box to identify submesh parts
+            if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+            const box = child.geometry.boundingBox;
+            const minY = box ? box.min.y : 0;
+            const maxY = box ? box.max.y : 2.5;
+            const height = maxY - minY;
+
+            // Jacket condition: main coat body & sleeves
+            const isJacket = minY >= 1.00 && maxY <= 2.18 && height >= 0.90;
+            const isFace = minY >= 2.00;
+
+            // Only main outer jacket/pants cast shadows to save 75%+ shadow render overhead
+            child.castShadow = isJacket || minY <= 0.8;
+            child.receiveShadow = false;
+
             if (child.material) {
-              const mat = child.material.clone();
+              const cacheKey = `${color}-${child.name || subIdx}`;
+              if (!loader._materialCache.has(cacheKey)) {
+                const mat = child.material.clone();
+                mat.roughness = 0.42;
+                mat.metalness = 0.10;
 
-              // Enhance material PBR realism
-              mat.roughness = 0.38;
-              mat.metalness = 0.12;
-
-              // Compute geometry bounding box to identify submesh parts
-              if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
-              const box = child.geometry.boundingBox;
-              const minY = box ? box.min.y : 0;
-              const maxY = box ? box.max.y : 2.5;
-              const height = maxY - minY;
-
-              // Jacket condition: main coat body & sleeves (minY >= 1.00 && maxY <= 2.18 && height >= 0.90)
-              const isJacket = minY >= 1.00 && maxY <= 2.18 && height >= 0.90;
-              // Face / Head condition: (minY >= 2.00)
-              const isFace = minY >= 2.00;
-
-              if (isJacket) {
-                mat.color = new THREE.Color(teamColorHex);
-                mat.emissive = new THREE.Color(teamColorHex);
-                mat.emissiveIntensity = 0.18;
-              } else if (isFace) {
-                // Warm radiant facial glow
-                mat.emissive = new THREE.Color("#ffe082");
-                mat.emissiveIntensity = 0.40;
+                if (isJacket) {
+                  mat.color = new THREE.Color(teamColorHex);
+                  mat.emissive = new THREE.Color(teamColorHex);
+                  mat.emissiveIntensity = 0.18;
+                } else if (isFace) {
+                  mat.emissive = new THREE.Color("#ffe082");
+                  mat.emissiveIntensity = 0.35;
+                }
+                loader._materialCache.set(cacheKey, mat);
               }
-
-              child.material = mat;
+              child.material = loader._materialCache.get(cacheKey);
             }
           }
         });
