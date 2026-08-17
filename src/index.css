@@ -275,57 +275,88 @@ body {
   font-size: 13px;
 }
 
-/* Top Turn Banner */
+/* Top Turn Banner - Small & Solid Team Color */
 .top-turn-banner {
   position: absolute;
-  top: 70px;
+  top: 64px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 18px;
-  border-radius: 24px;
-  background: rgba(15, 28, 22, 0.88);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   pointer-events: none;
   white-space: nowrap;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.25s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .top-turn-banner.red {
-  border-color: rgba(242, 30, 30, 0.8);
-  box-shadow: 0 0 22px rgba(242, 30, 30, 0.5);
+  background: #e11d48;
+  border-color: #fda4af;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(225, 29, 72, 0.45);
 }
+
 .top-turn-banner.green {
-  border-color: rgba(0, 172, 36, 0.8);
-  box-shadow: 0 0 22px rgba(0, 172, 36, 0.5);
+  background: #16a34a;
+  border-color: #86efac;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(22, 163, 74, 0.45);
 }
+
 .top-turn-banner.yellow {
-  border-color: rgba(250, 223, 39, 0.8);
-  box-shadow: 0 0 22px rgba(250, 223, 39, 0.5);
+  background: #ca8a04;
+  border-color: #fef08a;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(202, 138, 4, 0.45);
 }
+
 .top-turn-banner.blue {
-  border-color: rgba(59, 113, 239, 0.8);
-  box-shadow: 0 0 22px rgba(59, 113, 239, 0.5);
+  background: #2563eb;
+  border-color: #93c5fd;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45);
+}
+
+.top-turn-banner.winner {
+  background: linear-gradient(135deg, #b45309 0%, #f59e0b 100%);
+  border-color: #fde047;
+  color: #ffffff;
+  box-shadow: 0 4px 22px rgba(245, 158, 11, 0.5);
 }
 
 .top-turn-pulse-dot {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  box-shadow: 0 0 10px currentColor;
+  background: #ffffff !important;
+  box-shadow: 0 0 8px #ffffff;
   animation: turnPulse 1.2s infinite alternate ease-in-out;
 }
 
 .top-turn-text {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+}
+
+.top-turn-color-name {
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+
+.top-turn-type {
+  font-size: 10px;
+  opacity: 0.9;
+  font-weight: 600;
 }
 
 .top-turn-color-name {
@@ -841,7 +872,10 @@ body {
 ========================================================= */
 
 .lobby-card {
-  max-width: 520px;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   text-align: left;
 }
 
@@ -910,25 +944,43 @@ body {
 .lobby-color-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
-.lobby-color-row {
+.lobby-color-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.22s ease;
+}
+
+.lobby-color-card.red { border-left: 4px solid #f21e1e; }
+.lobby-color-card.green { border-left: 4px solid #00ac24; }
+.lobby-color-card.yellow { border-left: 4px solid #fadf27; }
+.lobby-color-card.blue { border-left: 4px solid #3b71ef; }
+
+.lobby-color-card.disabled {
+  opacity: 0.45;
+}
+
+.lobby-color-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 8px;
 }
 
 .lobby-color-badge {
   font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .lobby-color-badge.red {
@@ -1273,8 +1325,9 @@ body {
 
 @media (max-width: 640px) {
   .glass-modal-card {
-    padding: 24px 20px;
+    padding: 20px 16px;
     width: 95%;
+    max-height: 88vh;
   }
 
   .lobby-preset-grid {
@@ -1284,7 +1337,17 @@ body {
 
   .lobby-color-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 10px;
+  }
+
+  .lobby-color-card {
+    padding: 10px 12px;
+  }
+
+  .lobby-name-input {
+    font-size: 14px;
+    padding: 10px 12px;
+    min-height: 42px;
   }
 
   .lobby-difficulty-row {

@@ -160,28 +160,30 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
           ))}
         </div>
 
-        {/* Custom Color Settings */}
+        {/* Custom Color & Controller Settings */}
         <div className="lobby-color-settings">
           <h4 className="lobby-section-title">Color Controller & Name Setup</h4>
           <div className="lobby-color-grid">
             {PLAYER_COLORS.map((color) => (
-              <div key={color} className="lobby-color-row">
-                <div className={`lobby-color-badge ${color}`}>
-                  {labelFor(color)}
+              <div key={color} className={`lobby-color-card ${color} ${controllers[color] === "off" ? "disabled" : ""}`}>
+                <div className="lobby-color-header">
+                  <div className={`lobby-color-badge ${color}`}>
+                    {labelFor(color)}
+                  </div>
+                  <GsapSelect
+                    value={controllers[color] || "human"}
+                    onChange={(val) => handleControllerChange(color, val)}
+                    options={CONTROLLER_OPTIONS}
+                    className="lobby-select-gsap"
+                  />
                 </div>
                 <input
                   type="text"
                   className="lobby-name-input"
-                  placeholder={`${labelFor(color)} Name`}
+                  placeholder={`${labelFor(color)} Player Name`}
                   value={names[color] || ""}
                   onChange={(e) => handleNameChange(color, e.target.value)}
                   disabled={controllers[color] === "off"}
-                />
-                <GsapSelect
-                  value={controllers[color] || "human"}
-                  onChange={(val) => handleControllerChange(color, val)}
-                  options={CONTROLLER_OPTIONS}
-                  className="lobby-select-gsap"
                 />
               </div>
             ))}
