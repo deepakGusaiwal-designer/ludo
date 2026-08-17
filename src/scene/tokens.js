@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 
 import {
   COLORS,
@@ -11,9 +13,8 @@ import {
 import { colorMaterial, getMaterial } from "./materials.js";
 
 /**
- * Builds the sixteen pieces and returns them keyed by the id
- * the rules engine uses (`red-0`, `green-3`, ...), so the
- * scene and the rules never need to agree on array order.
+ * Builds the sixteen 3D human character tokens loaded from `/modal/human.glb`,
+ * applies team home colors (Red, Green, Yellow, Blue), and plays idle animation.
  */
 export function createTokens(boardGroup) {
   const bodyGeometry = new THREE.CylinderGeometry(0.18, 0.23, 0.38, 20);
@@ -40,6 +41,8 @@ export function createTokens(boardGroup) {
   });
 
   const byId = new Map();
+  const tokenGroups = [];
+  const mixers = [];
 
   for (const color of PLAYER_COLORS) {
     for (let slot = 0; slot < TOKENS_PER_PLAYER; slot++) {
@@ -51,13 +54,16 @@ export function createTokens(boardGroup) {
 
       const material = colorMaterial(color);
 
+      // Fallback/placeholder primitive meshes while GLTF loads
       const body = new THREE.Mesh(bodyGeometry, material);
+      body.name = "placeholder-body";
       body.position.y = 0.22;
       body.castShadow = true;
       body.receiveShadow = true;
       group.add(body);
 
       const head = new THREE.Mesh(headGeometry, material);
+      head.name = "placeholder-head";
       head.position.y = 0.41;
       head.castShadow = true;
       group.add(head);
@@ -66,6 +72,7 @@ export function createTokens(boardGroup) {
         footGeometry,
         getMaterial(COLORS[`${color}Dark`]),
       );
+      foot.name = "placeholder-foot";
       foot.position.y = 0.03;
       foot.castShadow = true;
       group.add(foot);
@@ -81,17 +88,144 @@ export function createTokens(boardGroup) {
 
       group.position.set(x, TOKEN_HEIGHT, z);
 
-      group.userData = { id, color, slot, ring };
+      group.userData = {
+        id,
+        color,
+        slot,
+        ring,
+        placeholderBody: body,
+        placeholderHead: head,
+        placeholderFoot: foot,
+      };
 
       boardGroup.add(group);
 
       byId.set(id, group);
+      tokenGroups.push(group);
     }
   }
+
+  // Load 3D Human Model (/modal/human.glb)
+  const loader = new GLTFLoader();
+  loader.load(
+    "/modal/human.glb",
+    (gltf) => {
+      const model = gltf.scene;
+      const idleClip =
+        gltf.animations?.find((a) => a.name.toLowerCase() === "idle") ||
+        gltf.animations?.[0];
+
+      // Calculate model dimensions and scale to fit Ludo tile
+      const box = new THREE.Box3().setFromObject(model);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+
+      const targetHeight = 0.74;
+      const scale = targetHeight / (size.y || 1);
+      model.scale.set(scale, scale, scale);
+
+      // Center model base directly on board tile
+      box.setFromObject(model);
+      const minY = box.min.y;
+      model.position.y = -minY;
+
+      tokenGroups.forEach((group) => {
+        const { color, placeholderBody, placeholderHead, placeholderFoot } =
+          group.userData;
+
+        // Remove placeholder primitives
+        if (placeholderBody) group.remove(placeholderBody);
+        if (placeholderHead) group.remove(placeholderHead);
+        if (placeholderFoot) group.remove(placeholderFoot);
+
+        const characterInstance = SkeletonUtils.clone(model);
+        characterInstance.name = `HumanCharacter-${group.userData.id}`;
+
+        const teamColorHex = COLORS[color];
+
+        characterInstance.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            if (child.material) {
+              const mat = child.material.clone();
+
+              // Enhance material PBR realism
+              mat.roughness = 0.38;
+              mat.metalness = 0.12;
+
+              // Compute geometry bounding box to identify submesh parts
+              if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+              const box = child.geometry.boundingBox;
+              const minY = box ? box.min.y : 0;
+              const maxY = box ? box.max.y : 2.5;
+              const height = maxY - minY;
+
+              // Jacket condition: main coat body & sleeves (minY >= 1.00 && maxY <= 2.18 && height >= 0.90)
+              const isJacket = minY >= 1.00 && maxY <= 2.18 && height >= 0.90;
+              // Face / Head condition: (minY >= 2.00)
+              const isFace = minY >= 2.00;
+
+              if (isJacket) {
+                mat.color = new THREE.Color(teamColorHex);
+                mat.emissive = new THREE.Color(teamColorHex);
+                mat.emissiveIntensity = 0.18;
+              } else if (isFace) {
+                // Warm radiant facial glow
+                mat.emissive = new THREE.Color("#ffe082");
+                mat.emissiveIntensity = 0.40;
+              }
+
+              child.material = mat;
+            }
+          }
+        });
+
+        // Store Mixamo bone joint references for leg-by-leg step walking animation
+        const bones = {};
+        characterInstance.traverse((node) => {
+          if (node.isBone || (node.name && node.name.startsWith("mixamorig:"))) {
+            const name = node.name.toLowerCase();
+            if (name.includes("leftupleg")) bones.leftUpLeg = node;
+            else if (name.includes("rightupleg")) bones.rightUpLeg = node;
+            else if (name.includes("leftleg") && !name.includes("up")) bones.leftKnee = node;
+            else if (name.includes("rightleg") && !name.includes("up")) bones.rightKnee = node;
+            // else if (name.includes("leftarm") && !name.includes("fore")) bones.leftArm = node;
+            // else if (name.includes("rightarm") && !name.includes("fore")) bones.rightArm = node;
+            else if (name.includes("hips")) bones.hips = node;
+            else if (name.includes("spine")) bones.spine = node;
+          }
+        });
+
+        group.userData.bones = bones;
+
+        // Set up AnimationMixer & play idle animation clip
+        const mixer = new THREE.AnimationMixer(characterInstance);
+        let idleAction = null;
+        if (idleClip) {
+          idleAction = mixer.clipAction(idleClip);
+          idleAction.play();
+        }
+        mixers.push(mixer);
+
+        group.userData.mixer = mixer;
+        group.userData.idleAction = idleAction;
+        group.add(characterInstance);
+      });
+    },
+    undefined,
+    (err) => {
+      console.warn("Could not load /modal/human.glb:", err);
+    },
+  );
 
   return {
     byId,
     all: [...byId.values()],
+    mixers,
+    update(delta) {
+      mixers.forEach((m) => m.update(delta));
+    },
     dispose() {
       bodyGeometry.dispose();
       headGeometry.dispose();
@@ -101,3 +235,4 @@ export function createTokens(boardGroup) {
     },
   };
 }
+

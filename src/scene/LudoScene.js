@@ -44,6 +44,7 @@ export class LudoScene {
     this.container = container;
 
     this.disposed = false;
+    this.clock = new THREE.Clock();
 
     /** ids of tokens mid-flight, which placement sync leaves alone */
     this.animating = new Set();
@@ -114,6 +115,7 @@ export class LudoScene {
     this.scene.add(ambient);
 
     const sun = new THREE.DirectionalLight("#ffd8a8", 2.2);
+    this.sunLight = sun;
 
     sun.position.set(-15, 28, 12);
     sun.castShadow = effectiveTier !== QUALITY_TIERS.LOW;
@@ -145,11 +147,40 @@ export class LudoScene {
 
     this.forest = createForest({ isMobile, qualityTier: effectiveTier });
 
-    this.perfMonitor = new PerformanceMonitor(() => {
-      if (this.qualityTier !== QUALITY_TIERS.LOW) {
-        this.setQualityTier(QUALITY_TIERS.LOW);
-      }
-    });
+    this.userPreferenceTier = savedQuality;
+
+    // Real-time continuous performance monitor for Auto graphics mode
+    this.perfMonitor = new PerformanceMonitor(
+      (_currentFps) => {
+        if (this.userPreferenceTier === QUALITY_TIERS.AUTO) {
+          if (this.qualityTier === QUALITY_TIERS.HIGH) {
+            this.applyEffectiveTier(QUALITY_TIERS.MEDIUM);
+          } else if (this.qualityTier === QUALITY_TIERS.MEDIUM) {
+            this.applyEffectiveTier(QUALITY_TIERS.LOW);
+          }
+        }
+      },
+      (_currentFps) => {
+        if (this.userPreferenceTier === QUALITY_TIERS.AUTO) {
+          const detectedMax = detectHardwareTier();
+          if (
+            this.qualityTier === QUALITY_TIERS.LOW &&
+            (detectedMax === QUALITY_TIERS.MEDIUM || detectedMax === QUALITY_TIERS.HIGH)
+          ) {
+            this.applyEffectiveTier(QUALITY_TIERS.MEDIUM);
+          } else if (
+            this.qualityTier === QUALITY_TIERS.MEDIUM &&
+            detectedMax === QUALITY_TIERS.HIGH
+          ) {
+            this.applyEffectiveTier(QUALITY_TIERS.HIGH);
+          }
+        }
+      },
+    );
+
+    if (savedQuality !== QUALITY_TIERS.AUTO) {
+      this.perfMonitor.stop();
+    }
 
     this.scene.add(this.forest.forest);
     this.scene.add(this.forest.ground);
@@ -161,29 +192,16 @@ export class LudoScene {
 
     this.tokens = createTokens(this.board.boardGroup);
 
-    this.tokenMeshes = [];
-
-    this.tokens.all.forEach((token) =>
-      token.traverse((child) => {
-        if (child.isMesh) this.tokenMeshes.push(child);
-      }),
-    );
-
     this.dice = createDice();
-
     this.scene.add(this.dice.diceGroup);
     this.scene.add(this.dice.turnDisc);
-
-    /* input */
 
     this.rig = createCameraRig(this.camera, this.renderer.domElement);
 
     this.raycaster = new THREE.Raycaster();
-
     this.pointer = new THREE.Vector2();
 
     this.hoveredToken = null;
-
     this.diceHovered = false;
 
     this.onClick = this.onClick.bind(this);
@@ -194,14 +212,7 @@ export class LudoScene {
     this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
     window.addEventListener("resize", this.onResize);
 
-    /* loop */
-
-    this.clock = new THREE.Clock();
-
-    this.frame = null;
-
     this.renderLoop = this.renderLoop.bind(this);
-
     this.renderLoop();
   }
 
@@ -220,6 +231,10 @@ export class LudoScene {
 
     const delta = this.clock.getDelta();
 
+    if (this.tokens?.update) {
+      this.tokens.update(delta);
+    }
+
     this.forest.update(this.clock.getElapsedTime());
 
     this.effects.update(delta);
@@ -230,7 +245,23 @@ export class LudoScene {
   }
 
   setQualityTier(tier) {
+    this.userPreferenceTier = tier;
+    const targetTier = tier === QUALITY_TIERS.AUTO ? detectHardwareTier() : tier;
+
+    if (tier === QUALITY_TIERS.AUTO) {
+      this.perfMonitor.reset();
+    } else {
+      this.perfMonitor.stop();
+    }
+
+    this.applyEffectiveTier(targetTier);
+  }
+
+  applyEffectiveTier(tier) {
+    if (this.qualityTier === tier && this.hasAppliedTier) return;
     this.qualityTier = tier;
+    this.hasAppliedTier = true;
+
     const isMobile = window.innerWidth < 768;
 
     if (tier === QUALITY_TIERS.LOW) {
@@ -243,7 +274,15 @@ export class LudoScene {
     } else {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3.0));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
+    }
+
+    if (this.sunLight) {
+      this.sunLight.castShadow = tier !== QUALITY_TIERS.LOW;
+      if (this.sunLight.shadow) {
+        this.sunLight.shadow.mapSize.width = tier === QUALITY_TIERS.HIGH ? 2048 : 1024;
+        this.sunLight.shadow.mapSize.height = tier === QUALITY_TIERS.HIGH ? 2048 : 1024;
+      }
     }
 
     if (this.forest) {
@@ -287,7 +326,7 @@ export class LudoScene {
   }
 
   pickToken() {
-    const hits = this.raycaster.intersectObjects(this.tokenMeshes);
+    const hits = this.raycaster.intersectObjects(this.tokens.all, true);
 
     if (!hits.length) return null;
 
@@ -379,9 +418,35 @@ export class LudoScene {
       this.forest.forest.visible = mode !== "2d";
     }
 
+    const isMobile = window.innerWidth < 768;
+
+    // Dynamic 3D Dice & Turn Disc repositioning for 2D vs 3D views
+    if (this.dice && this.dice.diceGroup) {
+      const is2D = mode === "2d";
+      const targetX = is2D ? 0 : 7;
+      const targetZ = is2D ? 7.6 : -0.2;
+
+      gsap.to(this.dice.diceGroup.position, {
+        x: targetX,
+        z: targetZ,
+        duration: 0.6,
+        ease: "power2.inOut",
+      });
+
+      if (this.dice.turnDisc) {
+        gsap.to(this.dice.turnDisc.position, {
+          x: targetX,
+          z: targetZ,
+          duration: 0.6,
+          ease: "power2.inOut",
+        });
+      }
+    }
+
     switch (mode) {
       case "2d":
-        this.rig.setAngle(1.48, 0, 21.5, 0);
+        // Zoomed-out top-down 2D view fitting both Ludo board AND bottom dice in frame
+        this.rig.setAngle(1.54, 0, isMobile ? 29.5 : 25.5, 0.4);
         break;
       case "close":
       case "closest":
@@ -582,8 +647,16 @@ export class LudoScene {
     const target = baseWorldPosition({ color, slot, position: 0 });
 
     gsap.killTweensOf(mesh.position);
+    gsap.killTweensOf(mesh.rotation);
 
     playTokenSpawn();
+
+    const dx = target.x - mesh.position.x;
+    const dz = target.z - mesh.position.z;
+    if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+      const targetAngle = Math.atan2(dx, dz);
+      gsap.to(mesh.rotation, { y: targetAngle, duration: 0.2, ease: "power1.out" });
+    }
 
     return new Promise((resolve) => {
       gsap
@@ -609,12 +682,41 @@ export class LudoScene {
     });
   }
 
-  /** One hop per square, so a move reads as a count. */
+  /** One hop per square with character facing orientation, realistic skeletal leg stepping, and arm swing walking. */
   hopAlong(mesh, color, slot, path) {
     gsap.killTweensOf(mesh.position);
+    gsap.killTweensOf(mesh.rotation);
+
+    const bones = mesh.userData.bones || {};
+    const idleAction = mesh.userData.idleAction;
+
+    if (idleAction) {
+      idleAction.fadeOut(0.1);
+    }
+
+    const resetBones = () => {
+      if (bones.leftUpLeg) gsap.to(bones.leftUpLeg.rotation, { x: 0, duration: 0.15 });
+      if (bones.rightUpLeg) gsap.to(bones.rightUpLeg.rotation, { x: 0, duration: 0.15 });
+      if (bones.leftKnee) gsap.to(bones.leftKnee.rotation, { x: 0, duration: 0.15 });
+      if (bones.rightKnee) gsap.to(bones.rightKnee.rotation, { x: 0, duration: 0.15 });
+      if (bones.leftArm) gsap.to(bones.leftArm.rotation, { x: 0, duration: 0.15 });
+      if (bones.rightArm) gsap.to(bones.rightArm.rotation, { x: 0, duration: 0.15 });
+
+      if (idleAction) {
+        idleAction.reset();
+        idleAction.fadeIn(0.15);
+        idleAction.play();
+      }
+    };
 
     return new Promise((resolve) => {
-      const timeline = gsap.timeline({ onComplete: resolve });
+      const timeline = gsap.timeline({
+        onComplete: () => {
+          gsap.to(mesh.rotation, { z: 0, x: 0, duration: 0.15, ease: "power2.out" });
+          resetBones();
+          resolve();
+        },
+      });
 
       path.forEach((position, stepIndex) => {
         const target = baseWorldPosition({ color, slot, position });
@@ -622,28 +724,103 @@ export class LudoScene {
         timeline.to(mesh.position, {
           x: target.x,
           z: target.z,
-          duration: 0.2,
+          duration: 0.22,
           ease: "power1.inOut",
           onStart: () => {
             playTokenHop(stepIndex, path.length);
+
+            // Orient 3D character puppet to face direction of travel
+            const dx = target.x - mesh.position.x;
+            const dz = target.z - mesh.position.z;
+            if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+              const targetAngle = Math.atan2(dx, dz);
+              gsap.to(mesh.rotation, {
+                y: targetAngle,
+                duration: 0.12,
+                ease: "power1.out",
+              });
+            }
+
+            // Subtle, Natural Human Step Walking Animations
+            const isLeftStep = stepIndex % 2 === 0;
+            if (bones.leftUpLeg) {
+              gsap.to(bones.leftUpLeg.rotation, {
+                x: isLeftStep ? 0.32 : -0.18,
+                duration: 0.11,
+                ease: "sine.inOut",
+              });
+            }
+            if (bones.rightUpLeg) {
+              gsap.to(bones.rightUpLeg.rotation, {
+                x: isLeftStep ? -0.18 : 0.32,
+                duration: 0.11,
+                ease: "sine.inOut",
+              });
+            }
+            if (bones.leftKnee) {
+              gsap.to(bones.leftKnee.rotation, {
+                x: isLeftStep ? 0.22 : 0.02,
+                duration: 0.11,
+                ease: "sine.inOut",
+              });
+            }
+            if (bones.rightKnee) {
+              gsap.to(bones.rightKnee.rotation, {
+                x: isLeftStep ? 0.02 : 0.22,
+                duration: 0.11,
+                ease: "sine.inOut",
+              });
+            }
+            // Arms stay resting naturally by the side (minimal swing)
+            if (bones.leftArm) {
+              gsap.to(bones.leftArm.rotation, {
+                x: isLeftStep ? -0.02 : 0.02,
+                duration: 0.11,
+                ease: "sine.inOut",
+              });
+            }
+            if (bones.rightArm) {
+              gsap.to(bones.rightArm.rotation, {
+                x: isLeftStep ? 0.02 : -0.02,
+                duration: 0.11,
+                ease: "sine.inOut",
+              });
+            }
           },
         });
 
+        // 1. Subtle Forward Lean & Step Lift
         timeline.to(
           mesh.position,
-          { y: 1.15, duration: 0.1, ease: "power2.out" },
+          { y: TOKEN_HEIGHT + 0.18, duration: 0.11, ease: "power2.out" },
+          "<",
+        );
+        timeline.to(
+          mesh.rotation,
+          {
+            x: 0.06, // Gentle forward lean while walking
+            z: stepIndex % 2 === 0 ? 0.05 : -0.05, // Subtle hip sway
+            duration: 0.11,
+            ease: "sine.inOut",
+          },
           "<",
         );
 
+        // 2. Landing Step Impact
         timeline.to(mesh.position, {
           y: TOKEN_HEIGHT,
-          duration: 0.1,
+          duration: 0.11,
           ease: "bounce.out",
           onComplete: () => {
             this.effects.triggerHopRipple(target, COLORS[color]);
             this.triggerSquashBounce(mesh);
           },
         });
+        timeline.to(
+          mesh.rotation,
+          { x: 0.0, z: 0.0, duration: 0.11, ease: "sine.out" },
+          "<",
+        );
       });
     });
   }
@@ -682,8 +859,16 @@ export class LudoScene {
     this.animating.add(tokenId);
 
     gsap.killTweensOf(mesh.position);
+    gsap.killTweensOf(mesh.rotation);
 
     playTokenCapture();
+
+    const dx = target.x - mesh.position.x;
+    const dz = target.z - mesh.position.z;
+    if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+      const targetAngle = Math.atan2(dx, dz);
+      gsap.to(mesh.rotation, { y: targetAngle, duration: 0.2, ease: "power1.out" });
+    }
 
     return new Promise((resolve) => {
       gsap

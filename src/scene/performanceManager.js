@@ -42,11 +42,22 @@ export function saveQualityPreference(tier) {
 }
 
 export class PerformanceMonitor {
-  constructor(onDownscale) {
+  constructor(onDownscale, onUpscale) {
     this.onDownscale = onDownscale;
+    this.onUpscale = onUpscale;
     this.frameCount = 0;
     this.lastTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.lowFpsDuration = 0;
+    this.highFpsDuration = 0;
+    this.enabled = true;
+    this.currentFps = 60;
+  }
+
+  reset() {
+    this.frameCount = 0;
+    this.lastTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+    this.lowFpsDuration = 0;
+    this.highFpsDuration = 0;
     this.enabled = true;
   }
 
@@ -58,20 +69,35 @@ export class PerformanceMonitor {
 
     if (delta >= 1000) {
       const fps = (this.frameCount * 1000) / delta;
+      this.currentFps = Math.round(fps);
       this.frameCount = 0;
       this.lastTime = time;
 
       if (fps < 30) {
         this.lowFpsDuration += 1;
-        if (this.lowFpsDuration >= 3) {
+        this.highFpsDuration = 0;
+
+        // Downscale graphics tier after 2 consecutive low FPS seconds
+        if (this.lowFpsDuration >= 2) {
           this.lowFpsDuration = 0;
-          this.enabled = false;
           if (typeof this.onDownscale === "function") {
-            this.onDownscale();
+            this.onDownscale(this.currentFps);
+          }
+        }
+      } else if (fps > 55) {
+        this.highFpsDuration += 1;
+        this.lowFpsDuration = 0;
+
+        // Upscale graphics tier if performance remains consistently 55+ FPS for 10s
+        if (this.highFpsDuration >= 10) {
+          this.highFpsDuration = 0;
+          if (typeof this.onUpscale === "function") {
+            this.onUpscale(this.currentFps);
           }
         }
       } else {
         this.lowFpsDuration = 0;
+        this.highFpsDuration = 0;
       }
     }
   }
