@@ -7,6 +7,7 @@ import { useOnlineLudo } from "../hooks/useOnlineLudo.js";
 
 import { AudioToggle } from "./AudioToggle.jsx";
 import { CameraControls } from "./CameraControls.jsx";
+import { DiceLoader } from "./DiceLoader.jsx";
 import { LobbyModal } from "./LobbyModal.jsx";
 import { OnlineLobbyModal } from "./OnlineLobbyModal.jsx";
 import { QualityModal } from "./QualityModal.jsx";
@@ -77,6 +78,7 @@ export function LudoGame() {
 
   return (
     <div className="ludo">
+      <DiceLoader ready={ready} />
       <div className="canvas-host" ref={containerRef} />
 
       <header className="hud">

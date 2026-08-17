@@ -109,14 +109,25 @@ export function HumanModelViewer({
             const height = maxY - minY;
 
             // Jacket condition: main coat body & sleeves (minY >= 1.00 && maxY <= 2.18 && height >= 0.90)
-            if (minY >= 1.00 && maxY <= 2.18 && height >= 0.90 && tintColor) {
+            const isJacket = minY >= 1.00 && maxY <= 2.18 && height >= 0.90;
+            const isHair = minY >= 1.80 && maxY >= 2.45;
+            const isFace = minY >= 2.00 && !isHair;
+
+            if (isJacket && tintColor) {
               child.material.color = tintColor;
               child.material.emissive = tintColor;
               child.material.emissiveIntensity = 0.18;
-            } else if (minY >= 2.00) {
-              // Warm radiant facial glow
-              child.material.emissive = new THREE.Color("#ffe082");
-              child.material.emissiveIntensity = 0.40;
+            } else if (isHair) {
+              child.material.color = new THREE.Color("#0a0a0c");
+              child.material.emissive = new THREE.Color("#000000");
+              child.material.emissiveIntensity = 0;
+              child.material.roughness = 0.65;
+            } else if (isFace) {
+              // Radiant fair skin tone
+              child.material.color = new THREE.Color("#fde6d8");
+              child.material.emissive = new THREE.Color("#ffd8c7");
+              child.material.emissiveIntensity = 0.22;
+              child.material.roughness = 0.40;
             }
           }
         });
