@@ -872,7 +872,7 @@ body {
 ========================================================= */
 
 .lobby-card {
-  max-width: 540px;
+  max-width: 740px;
   max-height: 90vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -1513,4 +1513,4 @@ body {
 .lobby-name-input:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-}
+}
