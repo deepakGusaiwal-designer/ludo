@@ -234,3 +234,18 @@ export function cellToWorld(row, col) {
 export function labelFor(color) {
   return color.charAt(0).toUpperCase() + color.slice(1);
 }
+
+export function getPlayerName(color, playerConfig, onlineState) {
+  if (!color) return "";
+  if (onlineState?.room?.players) {
+    const onlinePlayer = onlineState.room.players.find((p) => p.color === color);
+    if (onlinePlayer && onlinePlayer.name && onlinePlayer.name.trim()) {
+      return onlinePlayer.name.trim();
+    }
+  }
+  if (playerConfig?.names?.[color] && playerConfig.names[color].trim()) {
+    return playerConfig.names[color].trim();
+  }
+  return labelFor(color);
+}
+

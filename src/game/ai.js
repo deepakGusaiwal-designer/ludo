@@ -89,6 +89,12 @@ export const DEFAULT_PLAYER_CONFIG = {
     yellow: "computer",
     blue: "computer",
   },
+  names: {
+    red: "Red",
+    green: "Green",
+    yellow: "Yellow",
+    blue: "Blue",
+  },
 };
 
 /**

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { PLAYER_COLORS, labelFor } from "../game/constants.js";
+import { PLAYER_COLORS, getPlayerName, labelFor } from "../game/constants.js";
 import {
   DEFAULT_PLAYER_CONFIG,
   chooseBestMove,
@@ -120,13 +120,14 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
     m.status = "idle";
 
     const isComputer = playerConfig.controllers[nextColor] === "computer";
-    m.message = `${labelFor(nextColor)}${isComputer ? " (AI)" : ""} to roll.`;
+    const name = getPlayerName(nextColor, playerConfig, onlineState);
+    m.message = `${name}${isComputer ? " (AI)" : ""} to roll.`;
 
     sceneRef.current?.setHighlights([]);
     sceneRef.current?.setTurnColor(currentColor(m.state));
 
     publish();
-  }, [playerConfig, publish, sceneRef]);
+  }, [playerConfig, onlineState, publish, sceneRef]);
 
   /** Moves a token the player has chosen (or the only legal one). */
   const play = useCallback(
@@ -141,7 +142,8 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
 
       const dice = m.dice;
 
-      const mover = labelFor(currentColor(m.state));
+      const activeColor = currentColor(m.state);
+      const mover = getPlayerName(activeColor, playerConfig, onlineState);
 
       m.status = "moving";
       m.legalMoves = [];
@@ -149,8 +151,8 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       scene.setHighlights([]);
       publish();
 
-      if (onlineState?.room && onlineState.myColor === mover.toLowerCase()) {
-        onlineState.sendMoveToken(tokenId, mover.toLowerCase());
+      if (onlineState?.room && onlineState.myColor === activeColor) {
+        onlineState.sendMoveToken(tokenId, activeColor);
       }
 
       const result = applyMove(m.state, tokenId, dice);
@@ -166,7 +168,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       if (result.captured.length > 0) {
         const victim = tokenById(result.state, result.captured[0]);
 
-        events.push(`${mover} knocked ${labelFor(victim.color)} back to the yard`);
+        events.push(`${mover} knocked ${getPlayerName(victim.color, playerConfig, onlineState)} back to the yard`);
       }
 
       if (result.finished) events.push(`${mover} brought a token home`);
@@ -174,7 +176,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       if (result.won) {
         m.status = "over";
         m.dice = null;
-        m.message = `${labelFor(result.state.winner)} has all four tokens home.`;
+        m.message = `${getPlayerName(result.state.winner, playerConfig, onlineState)} has all four tokens home.`;
         publish();
         return;
       }
@@ -201,7 +203,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
 
       advanceTurn();
     },
-    [advanceTurn, publish, sceneRef],
+    [advanceTurn, playerConfig, onlineState, publish, sceneRef],
   );
 
   const roll = useCallback(async () => {
@@ -212,7 +214,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
     if (!scene || m.status !== "idle" || m.state.winner) return;
 
     const activeColor = currentColor(m.state);
-    const name = labelFor(activeColor);
+    const name = getPlayerName(activeColor, playerConfig, onlineState);
 
     m.status = "rolling";
     m.message = `${name} is rolling…`;
@@ -329,14 +331,15 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       m.legalMoves = [];
 
       const isComputer = newConfig.controllers[startColor] === "computer";
-      m.message = `${labelFor(startColor)}${isComputer ? " (AI)" : ""} to roll.`;
+      const startName = getPlayerName(startColor, newConfig, onlineState);
+      m.message = `${startName}${isComputer ? " (AI)" : ""} to roll.`;
 
       sceneRef.current?.resetTokens(m.state.tokens);
       sceneRef.current?.setTurnColor(startColor);
 
       publish();
     },
-    [publish, sceneRef],
+    [onlineState, publish, sceneRef],
   );
 
   /* Automated Computer AI Turn Loop */
@@ -408,7 +411,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       if (!scene || m.status !== "idle" || m.state.winner) return;
 
       const activeColor = currentColor(m.state);
-      const name = labelFor(activeColor);
+      const name = getPlayerName(activeColor, playerConfig, onlineState);
 
       m.status = "rolling";
       m.message = `${name} is rolling…`;

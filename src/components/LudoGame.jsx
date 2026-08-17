@@ -25,6 +25,7 @@ export function LudoGame() {
   const [isLobbyOpen, setIsLobbyOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
+  const [roomCopied, setRoomCopied] = useState(false);
 
   const onlineState = useOnlineLudo();
 
@@ -40,6 +41,14 @@ export function LudoGame() {
     restart,
     startNewMatch,
   } = useLudoGame(sceneRef, ready, onlineState);
+
+  const handleCopyRoomCode = () => {
+    if (onlineState?.room?.code) {
+      navigator.clipboard.writeText(onlineState.room.code);
+      setRoomCopied(true);
+      setTimeout(() => setRoomCopied(false), 2000);
+    }
+  };
 
   const handleConfirmReset = () => {
     setIsResetModalOpen(false);
@@ -122,7 +131,7 @@ export function LudoGame() {
         </div>
       </header>
 
-      <Scoreboard state={state} />
+      <Scoreboard state={state} playerConfig={playerConfig} onlineState={onlineState} />
 
       <TurnPanel
         state={state}
@@ -131,7 +140,22 @@ export function LudoGame() {
         canRoll={canRoll}
         onRoll={roll}
         playerConfig={playerConfig}
+        onlineState={onlineState}
       />
+
+      {/* Small Bottom-Right Corner Room ID Badge */}
+      {onlineState.room && (
+        <div
+          className={`bottom-right-room-badge ${roomCopied ? "copied" : ""}`}
+          onClick={handleCopyRoomCode}
+          title="Click to copy Room Code"
+        >
+          <Globe02Icon size={13} color="#38bdf8" />
+          <span className="badge-room-label">ROOM:</span>
+          <span className="badge-room-code">{onlineState.room.code}</span>
+          {roomCopied && <span className="badge-copied-toast">Copied!</span>}
+        </div>
+      )}
 
       <WinOverlay winner={state.winner} onRestart={restart} />
 

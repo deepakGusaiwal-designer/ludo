@@ -1,8 +1,8 @@
-import { COLORS, PLAYERS, TOKENS_PER_PLAYER, labelFor } from "../game/constants.js";
+import { COLORS, PLAYERS, TOKENS_PER_PLAYER, getPlayerName, labelFor } from "../game/constants.js";
 
 import { currentColor, tokensHome } from "../game/rules.js";
 
-export function Scoreboard({ state }) {
+export function Scoreboard({ state, playerConfig, onlineState }) {
   const active = state.winner ? null : currentColor(state);
 
   return (
@@ -18,7 +18,7 @@ export function Scoreboard({ state }) {
             aria-hidden="true"
           />
 
-          <span className="score-name">{labelFor(color)}</span>
+          <span className="score-name">{getPlayerName(color, playerConfig, onlineState)}</span>
 
           <span className="score-count">
             {tokensHome(state, color)}/{TOKENS_PER_PLAYER}

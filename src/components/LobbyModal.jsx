@@ -81,6 +81,14 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
   const [controllers, setControllers] = useState(
     currentConfig?.controllers || PRESETS[0].config.controllers,
   );
+  const [names, setNames] = useState(
+    currentConfig?.names || {
+      red: "Red",
+      green: "Green",
+      yellow: "Yellow",
+      blue: "Blue",
+    },
+  );
 
   if (!isOpen) return null;
 
@@ -92,6 +100,10 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
   const handleControllerChange = (color, type) => {
     setSelectedPreset("custom");
     setControllers((prev) => ({ ...prev, [color]: type }));
+  };
+
+  const handleNameChange = (color, value) => {
+    setNames((prev) => ({ ...prev, [color]: value }));
   };
 
   const handleStart = () => {
@@ -107,6 +119,7 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
     onStartMatch({
       difficulty,
       controllers,
+      names,
       activeCount,
     });
   };
@@ -129,7 +142,7 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
         </div>
         <h2 className="glass-modal-title">Game Setup & Players</h2>
         <p className="glass-modal-desc">
-          Choose your game mode, active players, and computer bot difficulty:
+          Choose your game mode, player names, and computer bot difficulty:
         </p>
 
         {/* Quick Presets */}
@@ -149,13 +162,21 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
 
         {/* Custom Color Settings */}
         <div className="lobby-color-settings">
-          <h4 className="lobby-section-title">Color Controller Setup</h4>
+          <h4 className="lobby-section-title">Color Controller & Name Setup</h4>
           <div className="lobby-color-grid">
             {PLAYER_COLORS.map((color) => (
               <div key={color} className="lobby-color-row">
                 <div className={`lobby-color-badge ${color}`}>
                   {labelFor(color)}
                 </div>
+                <input
+                  type="text"
+                  className="lobby-name-input"
+                  placeholder={`${labelFor(color)} Name`}
+                  value={names[color] || ""}
+                  onChange={(e) => handleNameChange(color, e.target.value)}
+                  disabled={controllers[color] === "off"}
+                />
                 <GsapSelect
                   value={controllers[color] || "human"}
                   onChange={(val) => handleControllerChange(color, val)}
