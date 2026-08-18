@@ -13,6 +13,7 @@ import {
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
 import { GsapRadio } from "./GsapFormControls.jsx";
 import { useModalPhysics } from "../hooks/useModalPhysics.js";
+import { ShinyButton } from "./reactbits/ShinyButton.jsx";
 
 export function OnlineLobbyModal({
   isOpen,
@@ -183,21 +184,19 @@ export function OnlineLobbyModal({
             </div>
 
             <div className="glass-modal-actions">
-              <button
-                type="button"
-                className="glass-btn glass-btn-secondary"
+              <ShinyButton
+                variant="secondary"
                 onClick={() => setTab("mode")}
               >
                 Back
-              </button>
-              <button
-                type="button"
-                className="glass-btn glass-btn-primary"
+              </ShinyButton>
+              <ShinyButton
+                variant="primary"
                 onClick={() => handleCreate(matchMode)}
                 disabled={!isConnected}
               >
                 Create Room
-              </button>
+              </ShinyButton>
             </div>
           </div>
         )}
@@ -226,21 +225,19 @@ export function OnlineLobbyModal({
               />
             </div>
             <div className="glass-modal-actions">
-              <button
-                type="button"
-                className="glass-btn glass-btn-secondary"
+              <ShinyButton
+                variant="secondary"
                 onClick={() => setTab("mode")}
               >
                 Back
-              </button>
-              <button
-                type="button"
-                className="glass-btn glass-btn-primary"
+              </ShinyButton>
+              <ShinyButton
+                variant="primary"
                 onClick={handleJoin}
                 disabled={!isConnected || !joinCode}
               >
                 Join Room
-              </button>
+              </ShinyButton>
             </div>
           </div>
         )}
@@ -299,21 +296,19 @@ export function OnlineLobbyModal({
 
             {/* Room Actions */}
             <div className="glass-modal-actions">
-              <button
-                type="button"
-                className="glass-btn glass-btn-secondary"
+              <ShinyButton
+                variant="secondary"
                 onClick={leaveRoom}
               >
                 Leave Room
-              </button>
+              </ShinyButton>
               {room.players.find((p) => p.socketId === onlineState.socket?.id)?.isHost && (
-                <button
-                  type="button"
-                  className="glass-btn glass-btn-primary"
+                <ShinyButton
+                  variant="primary"
                   onClick={handleStartGame}
                 >
                   🚀 Launch Match
-                </button>
+                </ShinyButton>
               )}
             </div>
           </div>
@@ -322,13 +317,12 @@ export function OnlineLobbyModal({
         {/* Global Cancel */}
         {!room && onCancel && (
           <div className="glass-modal-actions" style={{ marginTop: "14px" }}>
-            <button
-              type="button"
-              className="glass-btn glass-btn-secondary"
+            <ShinyButton
+              variant="secondary"
               onClick={onCancel}
             >
               Cancel
-            </button>
+            </ShinyButton>
           </div>
         )}
       </div>

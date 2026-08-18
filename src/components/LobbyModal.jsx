@@ -6,8 +6,12 @@ import {
   GameController01Icon,
 } from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
-import { GsapRadio, GsapSelect } from "./GsapFormControls.jsx";
+import {
+  GsapRadio,
+  GsapSelect,
+} from "./GsapFormControls.jsx";
 import { useModalPhysics } from "../hooks/useModalPhysics.js";
+import { ShinyButton } from "./reactbits/ShinyButton.jsx";
 
 const CONTROLLER_OPTIONS = [
   { value: "human", label: "👤 Human Player" },
@@ -242,21 +246,19 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
         {/* Actions */}
         <div className="glass-modal-actions">
           {onCancel && (
-            <button
-              type="button"
-              className="glass-btn glass-btn-secondary"
+            <ShinyButton
+              variant="secondary"
               onClick={onCancel}
             >
               Cancel
-            </button>
+            </ShinyButton>
           )}
-          <button
-            type="button"
-            className="glass-btn glass-btn-primary"
+          <ShinyButton
+            variant="primary"
             onClick={handleStart}
           >
             🚀 Start New Match
-          </button>
+          </ShinyButton>
         </div>
       </div>
     </div>

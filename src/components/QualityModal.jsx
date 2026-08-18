@@ -10,7 +10,9 @@ import {
   QUALITY_TIERS,
 } from "../scene/performanceManager.js";
 import { useModalPhysics } from "../hooks/useModalPhysics.js";
-import { GsapRadio, GsapSlider } from "./GsapFormControls.jsx";
+import { GsapRadio } from "./GsapFormControls.jsx";
+import { ShinyButton } from "./reactbits/ShinyButton.jsx";
+import { ElasticSlider } from "./reactbits/ElasticSlider.jsx";
 
 const PRESETS = [
   {
@@ -107,7 +109,7 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
         </div>
 
         <div className="brightness-control">
-          <GsapSlider
+          <ElasticSlider
             value={brightness}
             min={BRIGHTNESS_MIN}
             max={BRIGHTNESS_MAX}
@@ -117,6 +119,15 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
             label="Brightness"
             unit="%"
           />
+        </div>
+
+        <div className="glass-modal-actions">
+          <ShinyButton
+            variant="primary"
+            onClick={onClose}
+          >
+            ✓ Done
+          </ShinyButton>
         </div>
       </div>
     </div>

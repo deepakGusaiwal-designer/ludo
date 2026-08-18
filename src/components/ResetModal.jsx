@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Alert02Icon, Cancel01Icon } from "hugeicons-react";
 import { useModalPhysics } from "../hooks/useModalPhysics.js";
+import { ShinyButton } from "./reactbits/ShinyButton.jsx";
 
 export function ResetModal({ isOpen, onConfirm, onCancel }) {
   const modalRef = useModalPhysics();
@@ -36,21 +37,19 @@ export function ResetModal({ isOpen, onConfirm, onCancel }) {
         </p>
 
         <div className="glass-modal-actions">
-          <button
-            type="button"
-            className="glass-btn glass-btn-secondary"
+          <ShinyButton
+            variant="secondary"
             onClick={onCancel}
           >
             Cancel
-          </button>
+          </ShinyButton>
 
-          <button
-            type="button"
-            className="glass-btn glass-btn-danger"
+          <ShinyButton
+            variant="danger"
             onClick={onConfirm}
           >
             Reset Game
-          </button>
+          </ShinyButton>
         </div>
       </div>
     </div>

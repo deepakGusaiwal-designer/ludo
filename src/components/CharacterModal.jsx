@@ -6,6 +6,7 @@ import {
   saveSelectedCharacter,
 } from "../scene/characterManager.js";
 import { useModalPhysics } from "../hooks/useModalPhysics.js";
+import { ShinyButton } from "./reactbits/ShinyButton.jsx";
 
 export function CharacterModal({ isOpen, sceneRef, onCancel }) {
   const modalRef = useModalPhysics();
@@ -81,13 +82,12 @@ export function CharacterModal({ isOpen, sceneRef, onCancel }) {
         </div>
 
         <div className="glass-modal-actions">
-          <button
-            type="button"
-            className="glass-btn glass-btn-primary"
+          <ShinyButton
+            variant="primary"
             onClick={onCancel}
           >
             ✓ Done
-          </button>
+          </ShinyButton>
         </div>
       </div>
     </div>
