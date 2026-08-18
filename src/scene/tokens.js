@@ -31,9 +31,9 @@ import {
 export function createTokens(boardGroup, initialCharacterId = null) {
   let currentCharacterId = initialCharacterId || getSelectedCharacter();
 
-  const bodyGeometry = new THREE.CylinderGeometry(0.18, 0.23, 0.38, 20);
+  const bodyGeometry = new THREE.CylinderGeometry(0.20, 0.25, 0.40, 20);
   const headGeometry = new THREE.SphereGeometry(
-    0.20,
+    0.21,
     16,
     8,
     0,
@@ -41,9 +41,9 @@ export function createTokens(boardGroup, initialCharacterId = null) {
     0,
     Math.PI / 2,
   );
-  const footGeometry = new THREE.CylinderGeometry(0.24, 0.24, 0.06, 20);
+  const footGeometry = new THREE.CylinderGeometry(0.26, 0.26, 0.07, 20);
 
-  const ringGeometry = new THREE.TorusGeometry(0.31, 0.045, 8, 26);
+  const ringGeometry = new THREE.TorusGeometry(0.34, 0.05, 8, 26);
   const ringMaterial = new THREE.MeshStandardMaterial({
     color: "#fff6cf",
     emissive: "#e8c766",
@@ -167,6 +167,7 @@ export function createTokens(boardGroup, initialCharacterId = null) {
     const charModel = cloneCharacterInstance(template);
     if (charModel) {
       applyTeamColorsToModel(charModel, color);
+      charModel.scale.set(1.08, 1.08, 1.08);
       charModel.position.y = 0.00;
       group.add(charModel);
 

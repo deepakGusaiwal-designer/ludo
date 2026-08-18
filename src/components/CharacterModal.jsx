@@ -25,11 +25,11 @@ export function CharacterModal({ isOpen, sceneRef, onCancel }) {
         {onCancel && (
           <button
             type="button"
-            className="glass-modal-close-btn"
+            className="modal-close-icon-btn"
             onClick={onCancel}
             title="Close"
           >
-            <Cancel01Icon size={18} />
+            <Cancel01Icon size={16} />
           </button>
         )}
 

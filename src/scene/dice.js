@@ -109,7 +109,7 @@ export function createDice() {
 
   diceGroup.name = "Dice";
 
-  diceGroup.position.set(7, 1.2, -0.2);
+  diceGroup.position.set(5.8, 1.2, 0.0);
 
   const bodyGeometry = new THREE.BoxGeometry(1.25, 1.25, 1.25, 6, 6, 6);
 

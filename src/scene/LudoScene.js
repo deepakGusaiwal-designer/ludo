@@ -399,33 +399,35 @@ export class LudoScene {
       this.forest.forest.visible = mode !== "2d";
     }
 
+    const isMobile = window.innerWidth < 768;
+
     switch (mode) {
       case "2d":
-        this.rig.setAngle(1.48, 0, 21.5, 0);
+        this.rig.setAngle(1.48, 0, isMobile ? 14.5 : 13.8, 0);
         break;
       case "close":
       case "closest":
-        this.rig.setAngle(-0.05, 0, 9.5, 2.2);
+        this.rig.setAngle(-0.05, 0, 8.5, 2.0);
         break;
       case "top":
-        this.rig.setAngle(1.15, 0, 24, 14);
+        this.rig.setAngle(1.15, 0, isMobile ? 16.5 : 15.5, 11);
         break;
       case "red":
-        this.rig.setAngle(0.2, -Math.PI / 2, 25, 14);
+        this.rig.setAngle(0.2, -Math.PI / 2, isMobile ? 17.5 : 16.5, 11);
         break;
       case "green":
-        this.rig.setAngle(0.2, 0, 25, 14);
+        this.rig.setAngle(0.2, 0, isMobile ? 17.5 : 16.5, 11);
         break;
       case "yellow":
-        this.rig.setAngle(0.2, Math.PI / 2, 25, 14);
+        this.rig.setAngle(0.2, Math.PI / 2, isMobile ? 17.5 : 16.5, 11);
         break;
       case "blue":
-        this.rig.setAngle(0.2, Math.PI, 25, 14);
+        this.rig.setAngle(0.2, Math.PI, isMobile ? 17.5 : 16.5, 11);
         break;
       case "3d":
       case "default":
       default:
-        this.rig.setAngle(0, 0, 27, 14);
+        this.rig.setAngle(0, 0, isMobile ? 18.5 : 18.2, 11.2);
         break;
     }
   }

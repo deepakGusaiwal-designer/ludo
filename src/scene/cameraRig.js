@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import gsap from "gsap";
 
-const DEFAULT_DISTANCE = 27;
+const DEFAULT_DISTANCE = 18.2;
 
 /**
  * Camera rig with unrestricted user orbit control and angle preset support.
@@ -11,7 +11,7 @@ const DEFAULT_DISTANCE = 27;
  */
 export function createCameraRig(camera, domElement) {
   const target = new THREE.Vector3(0, 0, 0);
-  const orbit = { distance: DEFAULT_DISTANCE, height: 14 };
+  const orbit = { distance: DEFAULT_DISTANCE, height: 11.2 };
 
   let dragging = false;
   let previousX = 0;
