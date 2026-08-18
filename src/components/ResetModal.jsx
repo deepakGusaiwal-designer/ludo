@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { Alert02Icon, Cancel01Icon } from "hugeicons-react";
+import { useModalPhysics } from "../hooks/useModalPhysics.js";
 
 export function ResetModal({ isOpen, onConfirm, onCancel }) {
+  const modalRef = useModalPhysics();
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!isOpen) return;
@@ -15,7 +17,7 @@ export function ResetModal({ isOpen, onConfirm, onCancel }) {
 
   return (
     <div className="glass-modal-overlay">
-      <div className="glass-modal-card">
+      <div className="glass-modal-card" ref={modalRef}>
         <button
           type="button"
           className="modal-close-icon-btn"

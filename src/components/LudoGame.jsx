@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { CpuIcon, Globe02Icon, RefreshIcon, Settings02Icon } from "hugeicons-react";
+import { CpuIcon, Globe02Icon, RefreshIcon, Settings02Icon, UserIcon } from "hugeicons-react";
 
 import { useLudoGame } from "../hooks/useLudoGame.js";
 import { useLudoScene } from "../hooks/useLudoScene.js";
@@ -7,9 +7,10 @@ import { useOnlineLudo } from "../hooks/useOnlineLudo.js";
 
 import { AudioToggle } from "./AudioToggle.jsx";
 import { CameraControls } from "./CameraControls.jsx";
-import { DiceLoader } from "./DiceLoader.jsx";
+import { CharacterModal } from "./CharacterModal.jsx";
 import { LobbyModal } from "./LobbyModal.jsx";
 import { OnlineLobbyModal } from "./OnlineLobbyModal.jsx";
+import { Preloader } from "./Preloader.jsx";
 import { QualityModal } from "./QualityModal.jsx";
 import { ResetModal } from "./ResetModal.jsx";
 import { Scoreboard } from "./Scoreboard.jsx";
@@ -26,6 +27,7 @@ export function LudoGame() {
   const [isLobbyOpen, setIsLobbyOpen] = useState(false);
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
+  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [roomCopied, setRoomCopied] = useState(false);
 
   const onlineState = useOnlineLudo();
@@ -78,7 +80,7 @@ export function LudoGame() {
 
   return (
     <div className="ludo">
-      <DiceLoader ready={ready} />
+      <Preloader isReady={ready} />
       <div className="canvas-host" ref={containerRef} />
 
       <header className="hud">
@@ -93,17 +95,6 @@ export function LudoGame() {
         </div>
 
         <div className="hud-actions">
-          <CameraControls sceneRef={sceneRef} />
-          <AudioToggle />
-          <button
-            type="button"
-            className="icon-hud-btn"
-            onClick={() => setIsQualityModalOpen(true)}
-            title="3D Graphics Performance Settings"
-          >
-            <CpuIcon size={16} />
-            <span className="hud-btn-text">Graphics</span>
-          </button>
           <button
             type="button"
             className="icon-hud-btn online-hud-btn"
@@ -133,7 +124,47 @@ export function LudoGame() {
         </div>
       </header>
 
-      <Scoreboard state={state} playerConfig={playerConfig} onlineState={onlineState} />
+      {/* Floating Bottom-Left Controls: Camera & Audio */}
+      <div className="hud-corner-left">
+        <CameraControls sceneRef={sceneRef} />
+        <AudioToggle />
+      </div>
+
+      {/* Floating Bottom-Right Controls: Hero Pawn, Graphics & Room Badge */}
+      <div className="hud-corner-right">
+        {onlineState.room && (
+          <div
+            className={`bottom-right-room-badge ${roomCopied ? "copied" : ""}`}
+            onClick={handleCopyRoomCode}
+            title="Click to copy Room Code"
+          >
+            <Globe02Icon size={13} color="#38bdf8" />
+            <span className="badge-room-label">ROOM:</span>
+            <span className="badge-room-code">{onlineState.room.code}</span>
+            {roomCopied && <span className="badge-copied-toast">Copied!</span>}
+          </div>
+        )}
+        <button
+          type="button"
+          className="icon-hud-btn hero-hud-btn"
+          onClick={() => setIsCharacterModalOpen(true)}
+          title="Choose 3D Pawn Character"
+        >
+          <UserIcon size={16} />
+          <span className="hud-btn-text">Hero</span>
+        </button>
+        <button
+          type="button"
+          className="icon-hud-btn graphics-hud-btn"
+          onClick={() => setIsQualityModalOpen(true)}
+          title="3D Graphics Performance Settings"
+        >
+          <CpuIcon size={16} />
+          <span className="hud-btn-text">Graphics</span>
+        </button>
+      </div>
+
+      {/* <Scoreboard state={state} playerConfig={playerConfig} onlineState={onlineState} /> */}
 
       <TurnPanel
         state={state}
@@ -145,26 +176,18 @@ export function LudoGame() {
         onlineState={onlineState}
       />
 
-      {/* Small Bottom-Right Corner Room ID Badge */}
-      {onlineState.room && (
-        <div
-          className={`bottom-right-room-badge ${roomCopied ? "copied" : ""}`}
-          onClick={handleCopyRoomCode}
-          title="Click to copy Room Code"
-        >
-          <Globe02Icon size={13} color="#38bdf8" />
-          <span className="badge-room-label">ROOM:</span>
-          <span className="badge-room-code">{onlineState.room.code}</span>
-          {roomCopied && <span className="badge-copied-toast">Copied!</span>}
-        </div>
-      )}
-
       <WinOverlay winner={state.winner} onRestart={restart} />
 
       <ResetModal
         isOpen={isResetModalOpen}
         onConfirm={handleConfirmReset}
         onCancel={() => setIsResetModalOpen(false)}
+      />
+
+      <CharacterModal
+        isOpen={isCharacterModalOpen}
+        sceneRef={sceneRef}
+        onCancel={() => setIsCharacterModalOpen(false)}
       />
 
       <LobbyModal

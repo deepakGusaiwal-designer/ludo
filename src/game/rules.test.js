@@ -262,6 +262,43 @@ test("a block on a start square refuses entry from the yard", () => {
   );
 });
 
+/* ---------- stack limit ---------- */
+
+test("a third own token cannot land on an already-stacked ring square", () => {
+  const state = withPositions({ "red-0": 0, "red-1": 3, "red-2": 3 });
+
+  assert.equal(
+    canTokenMove(tokenAt(state, "red-0"), 3, buildOccupancy(state)),
+    false,
+    "landing exactly on your own block of two is refused",
+  );
+});
+
+test("a third own token cannot enter a start square already holding two", () => {
+  const state = withPositions({ "red-0": 0, "red-1": 0 });
+
+  assert.equal(
+    canTokenMove(tokenAt(state, "red-2"), 6, buildOccupancy(state)),
+    false,
+  );
+});
+
+test("the home lane and HOME itself have no stack limit", () => {
+  // three red tokens already resting at HOME must not stop a
+  // fourth from finishing too, or the game could never be won
+  const state = withPositions({
+    "red-0": FINISH_POSITION,
+    "red-1": FINISH_POSITION,
+    "red-2": FINISH_POSITION,
+    "red-3": FINISH_POSITION - 1,
+  });
+
+  assert.equal(
+    canTokenMove(tokenAt(state, "red-3"), 1, buildOccupancy(state)),
+    true,
+  );
+});
+
 /* ---------- capture ---------- */
 
 test("landing on a lone opponent sends it back to the yard", () => {
@@ -302,6 +339,30 @@ test("your own token is never captured", () => {
   assert.deepEqual(result.captured, []);
 
   assert.equal(tokenAt(result.state, "red-1").position, 4);
+});
+
+test("entering your own start square captures a lone opponent resting there", () => {
+  const state = withPositions({
+    "green-0": relForRing("green", START_INDEX.red),
+  });
+
+  const result = applyMove(state, "red-0", 6);
+
+  assert.deepEqual(result.captured, ["green-0"]);
+  assert.equal(tokenAt(result.state, "green-0").position, YARD);
+});
+
+test("a single move never captures more than one token", () => {
+  // two different opponents can share Red's start square safely
+  // until Red enters it — even then, at most one is sent home
+  const state = withPositions({
+    "green-0": relForRing("green", START_INDEX.red),
+    "yellow-0": relForRing("yellow", START_INDEX.red),
+  });
+
+  const result = applyMove(state, "red-0", 6);
+
+  assert.equal(result.captured.length, 1);
 });
 
 test("a token in its home lane cannot be captured from the ring", () => {
@@ -348,18 +409,18 @@ test("a non-six clears the six counter", () => {
   assert.equal(evaluateRoll(state, 3).sixCount, 0);
 });
 
-test("a dead roll passes the turn, a six keeps it", () => {
+test("a dead roll passes the turn, even a six with nothing to move", () => {
   const state = createInitialState(); // everything in the yard
 
   assert.equal(evaluateRoll(state, 4).kind, "pass");
 
-  // a 6 with nothing to move still earns another roll
+  // spec §5.3: forfeited "even if the roll was a 6"
   const blocked = withPositions({
     "green-0": relForRing("green", START_INDEX.red),
     "green-1": relForRing("green", START_INDEX.red),
   });
 
-  assert.equal(evaluateRoll(blocked, 6).kind, "reroll");
+  assert.equal(evaluateRoll(blocked, 6).kind, "pass");
 });
 
 test("a single legal move is reported as forced", () => {

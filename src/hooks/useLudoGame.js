@@ -263,15 +263,6 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       return;
     }
 
-    if (outcome.kind === "reroll") {
-      m.status = "idle";
-      m.message = `${name} rolled a 6 but has no legal move. Roll again.`;
-
-      publish();
-
-      return;
-    }
-
     m.legalMoves = outcome.legalMoves;
     m.status = "choosing";
 
@@ -370,7 +361,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
             );
             return {
               tokenId,
-              from: machine.current.state.tokens[tokenId]?.position,
+              from: tokenById(machine.current.state, tokenId)?.position,
               to: result.to,
               entered: result.entered,
               finished: result.finished,
@@ -440,13 +431,6 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
         publish();
         await wait(DEAD_ROLL_PAUSE);
         if (alive.current) advanceTurn();
-        return;
-      }
-
-      if (outcome.kind === "reroll") {
-        m.status = "idle";
-        m.message = `${name} rolled a 6 but has no legal move. Roll again.`;
-        publish();
         return;
       }
 

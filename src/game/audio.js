@@ -22,25 +22,6 @@ function getContext() {
   return audioCtx;
 }
 
-// Global user gesture listener to bypass browser audio autoplay restrictions
-if (typeof window !== "undefined") {
-  const unlockAudioGesture = () => {
-    const ctx = getContext();
-    if (ctx && ctx.state === "suspended") {
-      ctx.resume();
-    }
-    if (!muted) {
-      startForestAmbience();
-    }
-    window.removeEventListener("click", unlockAudioGesture);
-    window.removeEventListener("touchstart", unlockAudioGesture);
-    window.removeEventListener("keydown", unlockAudioGesture);
-  };
-  window.addEventListener("click", unlockAudioGesture);
-  window.addEventListener("touchstart", unlockAudioGesture);
-  window.addEventListener("keydown", unlockAudioGesture);
-}
-
 export function getMuted() {
   return muted;
 }
@@ -48,158 +29,11 @@ export function getMuted() {
 export function setMuted(val) {
   muted = Boolean(val);
   localStorage.setItem("ludo_muted", String(muted));
-  if (muted) {
-    stopForestAmbience();
-  } else {
-    startForestAmbience();
-  }
 }
 
 export function toggleMuted() {
   setMuted(!muted);
   return muted;
-}
-
-/* ------------------------------------------------------ */
-/* Forest Night Ambience & Bonfire Audio Generator       */
-/* ------------------------------------------------------ */
-
-let ambienceNode = null;
-let crackleTimer = null;
-let cricketTimer = null;
-let owlTimer = null;
-
-function createNoiseBuffer(ctx, seconds = 4) {
-  const bufferSize = ctx.sampleRate * seconds;
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = Math.random() * 2 - 1;
-  }
-  return buffer;
-}
-
-function createBonfireBuffer(ctx, seconds = 5) {
-  const bufferSize = ctx.sampleRate * seconds;
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-
-  for (let i = 0; i < bufferSize; i++) {
-    // Generate organic bonfire wood pop crackles
-    if (Math.random() < 0.0025) {
-      const popLen = Math.floor(ctx.sampleRate * (0.006 + Math.random() * 0.015));
-      const popAmp = 0.15 + Math.random() * 0.35;
-      for (let j = 0; j < popLen && i + j < bufferSize; j++) {
-        const t = j / popLen;
-        data[i + j] += (Math.random() * 2 - 1) * popAmp * Math.exp(-t * 8);
-      }
-      i += popLen;
-    }
-  }
-  return buffer;
-}
-
-export function startForestAmbience() {
-  if (muted || (ambienceNode && ambienceNode.active)) return;
-  const ctx = getContext();
-  if (!ctx) return;
-
-  // Set guard immediately to prevent recursion
-  ambienceNode = { active: true };
-
-  const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.18, ctx.currentTime);
-
-  // 1. Hardware-Accelerated Bonfire Wood Crackle (Zero GC Overhead)
-  const crackleBuffer = createBonfireBuffer(ctx, 5);
-  const crackleSource = ctx.createBufferSource();
-  crackleSource.buffer = crackleBuffer;
-  crackleSource.loop = true;
-
-  const crackleFilter = ctx.createBiquadFilter();
-  crackleFilter.type = "bandpass";
-  crackleFilter.frequency.value = 1800;
-  crackleFilter.Q.value = 1.8;
-
-  const crackleGain = ctx.createGain();
-  crackleGain.gain.value = 0.7;
-
-  crackleSource.connect(crackleFilter);
-  crackleFilter.connect(crackleGain);
-  crackleGain.connect(masterGain);
-  crackleSource.start();
-
-  // 2. Crisp Night Cricket Chirp Sounds
-  const scheduleCricket = () => {
-    if (muted || !ambienceNode) return;
-    const now = ctx.currentTime;
-    const pulses = 3 + Math.floor(Math.random() * 3);
-
-    for (let i = 0; i < pulses; i++) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(4500 + Math.random() * 400, now + i * 0.045);
-
-      gain.gain.setValueAtTime(0.06, now + i * 0.045);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.045 + 0.035);
-
-      osc.connect(gain);
-      gain.connect(masterGain);
-
-      osc.start(now + i * 0.045);
-      osc.stop(now + i * 0.045 + 0.04);
-    }
-
-    const nextDelay = 3500 + Math.random() * 5000;
-    cricketTimer = setTimeout(scheduleCricket, nextDelay);
-  };
-  scheduleCricket();
-
-  // 3. Warm Night Owl Call (Echoing Hoot)
-  const scheduleOwl = () => {
-    if (muted || !ambienceNode) return;
-    const now = ctx.currentTime;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(370, now);
-    osc.frequency.exponentialRampToValueAtTime(310, now + 0.42);
-
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.09, now + 0.12);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
-
-    osc.connect(gain);
-    gain.connect(masterGain);
-
-    osc.start(now);
-    osc.stop(now + 0.50);
-
-    const nextDelay = 10000 + Math.random() * 16000;
-    owlTimer = setTimeout(scheduleOwl, nextDelay);
-  };
-  owlTimer = setTimeout(scheduleOwl, 4000);
-
-  masterGain.connect(ctx.destination);
-
-  ambienceNode = {
-    masterGain,
-    stop() {
-      if (crackleTimer) clearTimeout(crackleTimer);
-      if (cricketTimer) clearTimeout(cricketTimer);
-      if (owlTimer) clearTimeout(owlTimer);
-      ambienceNode = null;
-    },
-  };
-}
-
-export function stopForestAmbience() {
-  if (ambienceNode) {
-    ambienceNode.stop();
-  }
 }
 
 /** Mobile Haptic Vibration Helper */

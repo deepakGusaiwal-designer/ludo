@@ -26,6 +26,7 @@ import {
   PLAYERS,
   RING_LENGTH,
   SAFE_TRACK_INDEXES,
+  STACK_LIMIT,
   STACK_RADIUS,
   START_INDEX,
   TOKENS_PER_PLAYER,
@@ -155,6 +156,12 @@ export function isBlockedFor(occupancy, ringIndex, color) {
   );
 }
 
+/** How many of a color's own tokens already stand on a ring cell. */
+function ownCountAt(occupancy, ringIndex, color) {
+  const counts = occupancy.get(ringIndex);
+  return counts?.[color] || 0;
+}
+
 function pathIsClear(token, from, to, occupancy) {
   const start = START_INDEX[token.color];
 
@@ -179,12 +186,17 @@ export function canTokenMove(token, dice, occupancy) {
 
   if (token.finished) return false;
 
-  // Leaving the yard needs a 6, and an opponent block on the
-  // start square still refuses entry.
+  // Leaving the yard needs a 6, an opponent block on the start
+  // square still refuses entry, and the start square can't take
+  // a third stacked token of the same color.
   if (isInYard(token)) {
     if (dice !== 6) return false;
 
-    return !isBlockedFor(occupancy, START_INDEX[token.color], token.color);
+    const start = START_INDEX[token.color];
+
+    if (isBlockedFor(occupancy, start, token.color)) return false;
+
+    return ownCountAt(occupancy, start, token.color) < STACK_LIMIT;
   }
 
   // Home has to be reached exactly.
@@ -192,7 +204,19 @@ export function canTokenMove(token, dice, occupancy) {
 
   if (destination > FINISH_POSITION) return false;
 
-  return pathIsClear(token, token.position, destination, occupancy);
+  if (!pathIsClear(token, token.position, destination, occupancy)) return false;
+
+  // The stack cap only applies on the shared ring — see the
+  // STACK_LIMIT comment in constants.js for why HOME is exempt.
+  if (destination <= LAST_RING_STEP) {
+    const destIndex = (START_INDEX[token.color] + destination) % RING_LENGTH;
+
+    if (ownCountAt(occupancy, destIndex, token.color) >= STACK_LIMIT) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function getLegalMoves(state, dice) {
@@ -244,17 +268,27 @@ export function applyMove(state, tokenId, dice) {
   if (isOnRing(moved)) {
     const landing = ringIndexOf(moved);
 
-    if (!SAFE_TRACK_INDEXES.has(landing)) {
-      tokens = tokens.map((each) => {
-        if (each.id === moved.id) return each;
-        if (each.color === moved.color) return each;
-        if (!isOnRing(each)) return each;
-        if (ringIndexOf(each) !== landing) return each;
+    // Safe squares block capture — except a start square doesn't
+    // protect an opponent from the square's own owner entering
+    // onto it. A single move can capture at most one token.
+    if (!SAFE_TRACK_INDEXES.has(landing) || entered) {
+      const victim = tokens.find(
+        (each) =>
+          each.id !== moved.id &&
+          each.color !== moved.color &&
+          isOnRing(each) &&
+          ringIndexOf(each) === landing,
+      );
 
-        captured.push(each.id);
+      if (victim) {
+        captured.push(victim.id);
 
-        return { ...each, position: YARD, finished: false };
-      });
+        tokens = tokens.map((each) =>
+          each.id === victim.id
+            ? { ...each, position: YARD, finished: false }
+            : each,
+        );
+      }
     }
   }
 
@@ -305,12 +339,9 @@ export function evaluateRoll(state, value) {
   const legalMoves = getLegalMoves(state, value);
 
   if (legalMoves.length === 0) {
-    // A 6 still earns another roll even with nothing to move.
-    return {
-      kind: value === 6 ? "reroll" : "pass",
-      sixCount,
-      legalMoves: [],
-    };
+    // If no token can use the roll, it's forfeited and the turn
+    // ends — even a 6, per the spec's explicit call-out.
+    return { kind: "pass", sixCount, legalMoves: [] };
   }
 
   return {
