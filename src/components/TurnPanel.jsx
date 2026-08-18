@@ -32,7 +32,7 @@ export function TurnPanel({ state, dice, message, canRoll, onRoll, playerConfig,
         </span>
       </div>
 
-      <div className={`panel turn-panel ${activeColor}-turn`}>
+      {/* <div className={`panel turn-panel ${activeColor}-turn`}>
         <div className="turn-row">
           <span className="turn-dot pulsing" style={{ background: COLORS[color] }} />
 
@@ -59,7 +59,7 @@ export function TurnPanel({ state, dice, message, canRoll, onRoll, playerConfig,
         </button>
 
         <div className="dice-readout">{dice ? `Dice ${dice}` : "Dice —"}</div>
-      </div>
+      </div> */}
     </>
   );
 }

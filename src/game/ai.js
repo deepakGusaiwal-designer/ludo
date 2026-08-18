@@ -1,4 +1,11 @@
-import { PLAYER_COLORS, SAFE_TRACK_INDEXES } from "./constants.js";
+import {
+  LAST_RING_STEP,
+  PLAYER_COLORS,
+  RING_LENGTH,
+  SAFE_TRACK_INDEXES,
+  START_INDEX,
+} from "./constants.js";
+import { isOnRing, ringIndexOf } from "./rules.js";
 
 /**
  * Evaluates a legal move and assigns a strategic heuristic score.
@@ -21,9 +28,19 @@ function scoreMove(state, move) {
     score += 70;
   }
 
-  // 4. Moving onto a Safe Square (Stars or Start squares)
-  if (typeof move.to === "number" && SAFE_TRACK_INDEXES.has(move.to)) {
-    score += 45;
+  const token = state.tokens.find((each) => each.id === move.tokenId);
+
+  // `move.to` is a per-color relative step (0 at that color's own
+  // start), not a shared board index — it has to be converted to
+  // a ring cell before comparing against SAFE_TRACK_INDEXES, which
+  // is a shared-board coordinate.
+  if (token && typeof move.to === "number" && move.to <= LAST_RING_STEP) {
+    const ringIndex = (START_INDEX[token.color] + move.to) % RING_LENGTH;
+
+    // 4. Moving onto a Safe Square (Stars or Start squares)
+    if (SAFE_TRACK_INDEXES.has(ringIndex)) {
+      score += 45;
+    }
   }
 
   // 5. Prefer advancing tokens that are closer to home
@@ -32,13 +49,13 @@ function scoreMove(state, move) {
   }
 
   // 6. Escape from a dangerous position (if an opponent is within 6 steps behind)
-  const token = state.tokens[move.tokenId];
-  if (token && typeof token.position === "number") {
-    const isVulnerable = Object.values(state.tokens).some((other) => {
-      if (other.color === token.color || typeof other.position !== "number") {
-        return false;
-      }
-      const dist = (token.position - other.position + 52) % 52;
+  if (token && isOnRing(token)) {
+    const myIndex = ringIndexOf(token);
+
+    const isVulnerable = state.tokens.some((other) => {
+      if (other.color === token.color || !isOnRing(other)) return false;
+
+      const dist = (myIndex - ringIndexOf(other) + RING_LENGTH) % RING_LENGTH;
       return dist >= 1 && dist <= 6;
     });
 

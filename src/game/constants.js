@@ -41,6 +41,16 @@ export const TOKENS_PER_PLAYER = 4;
 
 export const MAX_SIXES = 3;
 
+/**
+ * Two of a player's own tokens may share a ring square — that's
+ * what forms a block. A third is refused. This cap only applies
+ * on the shared ring: the home lane is private, and HOME itself
+ * stays uncapped so every token a player owns can finish there
+ * (capping it would leave the 3rd/4th token permanently unable
+ * to finish once two arrived).
+ */
+export const STACK_LIMIT = 2;
+
 export const COLORS = {
   red: "#f21e1e",
   green: "#00ac24",

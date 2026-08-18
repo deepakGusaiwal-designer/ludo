@@ -12,6 +12,7 @@ import {
 } from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
 import { GsapRadio } from "./GsapFormControls.jsx";
+import { useModalPhysics } from "../hooks/useModalPhysics.js";
 
 export function OnlineLobbyModal({
   isOpen,
@@ -19,6 +20,7 @@ export function OnlineLobbyModal({
   onStartMatch,
   onCancel,
 }) {
+  const modalRef = useModalPhysics();
   const [tab, setTab] = useState("mode"); // "mode" | "create" | "join" | "room"
   const [playerName, setPlayerName] = useState("Player 1");
   const [matchMode, setMatchMode] = useState("1v1"); // "1v1" | "4p"
@@ -74,9 +76,11 @@ export function OnlineLobbyModal({
     onStartMatch(room);
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="glass-modal-overlay">
-      <div className="glass-modal-card lobby-card online-lobby-card">
+      <div className="glass-modal-card lobby-card online-lobby-card" ref={modalRef}>
         {onCancel && (
           <button
             type="button"

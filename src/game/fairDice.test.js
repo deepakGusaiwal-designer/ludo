@@ -1,16 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getFairRoll, resetFairDice } from "./fairDice.js";
+import { YARD } from "./constants.js";
 
 test("Fair Dice system guarantees a 6 when a player is stuck in the yard", () => {
   resetFairDice();
 
   const color = "red";
   const yardTokens = [
-    { color: "red", position: "yard", finished: false },
-    { color: "red", position: "yard", finished: false },
-    { color: "red", position: "yard", finished: false },
-    { color: "red", position: "yard", finished: false },
+    { color: "red", position: YARD, finished: false },
+    { color: "red", position: YARD, finished: false },
+    { color: "red", position: YARD, finished: false },
+    { color: "red", position: YARD, finished: false },
   ];
 
   let rolledSix = false;

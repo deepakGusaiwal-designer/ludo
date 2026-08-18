@@ -16,6 +16,7 @@ import {
   playVictoryFanfare,
 } from "../game/audio.js";
 
+import { ANIMATION_KEYS } from "./animationManager.js";
 import { createBoard } from "./board.js";
 import { createCameraRig } from "./cameraRig.js";
 import { createDice } from "./dice.js";
@@ -25,7 +26,7 @@ import { createTokens } from "./tokens.js";
 import { disposeMaterials } from "./materials.js";
 
 import {
-  detectHardwareTier,
+  getSavedBrightness,
   getSavedQualityPreference,
   PerformanceMonitor,
   QUALITY_TIERS,
@@ -44,7 +45,6 @@ export class LudoScene {
     this.container = container;
 
     this.disposed = false;
-    this.clock = new THREE.Clock();
 
     /** ids of tokens mid-flight, which placement sync leaves alone */
     this.animating = new Set();
@@ -53,19 +53,17 @@ export class LudoScene {
 
     const isMobile = window.innerWidth < 768;
 
-    const savedQuality = getSavedQualityPreference();
-    const effectiveTier = savedQuality === QUALITY_TIERS.AUTO ? detectHardwareTier() : savedQuality;
+    const effectiveTier = getSavedQualityPreference();
     this.qualityTier = effectiveTier;
 
     /* scene */
 
     this.scene = new THREE.Scene();
 
-    // Warm golden hour twilight sky
-    const skyColor = new THREE.Color("#261c14");
+    const skyColor = new THREE.Color("#203127");
     this.scene.background = skyColor;
 
-    // Atmospheric warm golden fog
+    // Atmospheric forest fog
     this.scene.fog = new THREE.Fog(skyColor, isMobile ? 26 : 20, isMobile ? 75 : 60);
 
     /* camera */
@@ -82,48 +80,52 @@ export class LudoScene {
     /* renderer */
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: effectiveTier !== QUALITY_TIERS.LOW,
+      antialias: effectiveTier !== QUALITY_TIERS.LIGHT,
       powerPreference: "high-performance",
     });
 
     this.renderer.setSize(container.clientWidth, container.clientHeight);
 
-    if (effectiveTier === QUALITY_TIERS.LOW) {
+    if (effectiveTier === QUALITY_TIERS.LIGHT) {
       this.renderer.shadowMap.enabled = false;
       this.renderer.setPixelRatio(1.0);
-    } else if (effectiveTier === QUALITY_TIERS.MEDIUM) {
+    } else if (effectiveTier === QUALITY_TIERS.ULTRA) {
       this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.BasicShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3.0));
     } else {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     }
 
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = isMobile ? 1.05 : 0.98;
+
+    // The base exposure the scene was tuned at; brightness is a
+    // user multiplier applied on top of it (see setBrightness).
+    this.baseExposure = isMobile ? 1.02 : 0.95;
+    this.brightness = getSavedBrightness();
+    this.renderer.toneMappingExposure = this.baseExposure * (this.brightness / 100);
 
     container.appendChild(this.renderer.domElement);
 
-    /* lighting - Warm Golden Glow Theme */
+    /* lighting */
 
-    // Warm golden sky & earth hemisphere light
-    this.scene.add(new THREE.HemisphereLight("#ffe0b2", "#3a281a", isMobile ? 1.5 : 1.35));
+    this.scene.add(new THREE.HemisphereLight("#c8d6c5", "#1b281f", isMobile ? 1.4 : 1.25));
 
-    // Cozy radiant golden ambient fill light
-    const ambient = new THREE.AmbientLight("#ffecb3", isMobile ? 0.58 : 0.50);
+    // Cozy atmospheric ambient fill light
+    const ambient = new THREE.AmbientLight("#d4c4a8", isMobile ? 0.50 : 0.42);
     this.scene.add(ambient);
 
-    // Radiant golden directional sun light
-    const sun = new THREE.DirectionalLight("#ffc266", 2.5);
-    this.sunLight = sun;
+    const sun = new THREE.DirectionalLight("#ffd8a8", 2.2);
 
     sun.position.set(-15, 28, 12);
-    sun.castShadow = effectiveTier !== QUALITY_TIERS.LOW;
-    sun.shadow.mapSize.width = effectiveTier === QUALITY_TIERS.HIGH ? 1024 : 512;
-    sun.shadow.mapSize.height = effectiveTier === QUALITY_TIERS.HIGH ? 1024 : 512;
+    sun.castShadow = effectiveTier !== QUALITY_TIERS.LIGHT;
+    const shadowMapSize =
+      effectiveTier === QUALITY_TIERS.ULTRA ? 4096 : effectiveTier === QUALITY_TIERS.HIGH ? 2048 : 1024;
+    sun.shadow.mapSize.width = shadowMapSize;
+    sun.shadow.mapSize.height = shadowMapSize;
     sun.shadow.camera.left = -25;
     sun.shadow.camera.right = 25;
     sun.shadow.camera.top = 25;
@@ -134,13 +136,13 @@ export class LudoScene {
 
     this.scene.add(sun);
 
-    // Warm golden-amber fill from opposite side
-    const fill = new THREE.DirectionalLight("#ffd180", 0.75);
+    // Cool blue-green fill from opposite side for forest depth
+    const fill = new THREE.DirectionalLight("#a4c8b0", 0.6);
     fill.position.set(12, 10, -14);
     this.scene.add(fill);
 
-    // Radiant golden ground bounce light
-    const bounce = new THREE.PointLight("#ffab40", 0.85, 45);
+    // Warm ground bounce light
+    const bounce = new THREE.PointLight("#d4a96a", 0.5, 40);
     bounce.position.set(0, 0.5, 0);
     this.scene.add(bounce);
 
@@ -150,40 +152,7 @@ export class LudoScene {
 
     this.forest = createForest({ isMobile, qualityTier: effectiveTier });
 
-    this.userPreferenceTier = savedQuality;
-
-    // Real-time continuous performance monitor for Auto graphics mode
-    this.perfMonitor = new PerformanceMonitor(
-      (_currentFps) => {
-        if (this.userPreferenceTier === QUALITY_TIERS.AUTO) {
-          if (this.qualityTier === QUALITY_TIERS.HIGH) {
-            this.applyEffectiveTier(QUALITY_TIERS.MEDIUM);
-          } else if (this.qualityTier === QUALITY_TIERS.MEDIUM) {
-            this.applyEffectiveTier(QUALITY_TIERS.LOW);
-          }
-        }
-      },
-      (_currentFps) => {
-        if (this.userPreferenceTier === QUALITY_TIERS.AUTO) {
-          const detectedMax = detectHardwareTier();
-          if (
-            this.qualityTier === QUALITY_TIERS.LOW &&
-            (detectedMax === QUALITY_TIERS.MEDIUM || detectedMax === QUALITY_TIERS.HIGH)
-          ) {
-            this.applyEffectiveTier(QUALITY_TIERS.MEDIUM);
-          } else if (
-            this.qualityTier === QUALITY_TIERS.MEDIUM &&
-            detectedMax === QUALITY_TIERS.HIGH
-          ) {
-            this.applyEffectiveTier(QUALITY_TIERS.HIGH);
-          }
-        }
-      },
-    );
-
-    if (savedQuality !== QUALITY_TIERS.AUTO) {
-      this.perfMonitor.stop();
-    }
+    this.perfMonitor = new PerformanceMonitor(null);
 
     this.scene.add(this.forest.forest);
     this.scene.add(this.forest.ground);
@@ -195,16 +164,29 @@ export class LudoScene {
 
     this.tokens = createTokens(this.board.boardGroup);
 
+    this.tokenMeshes = [];
+
+    this.tokens.all.forEach((token) =>
+      token.traverse((child) => {
+        if (child.isMesh) this.tokenMeshes.push(child);
+      }),
+    );
+
     this.dice = createDice();
+
     this.scene.add(this.dice.diceGroup);
     this.scene.add(this.dice.turnDisc);
+
+    /* input */
 
     this.rig = createCameraRig(this.camera, this.renderer.domElement);
 
     this.raycaster = new THREE.Raycaster();
+
     this.pointer = new THREE.Vector2();
 
     this.hoveredToken = null;
+
     this.diceHovered = false;
 
     this.onClick = this.onClick.bind(this);
@@ -215,7 +197,14 @@ export class LudoScene {
     this.renderer.domElement.addEventListener("pointermove", this.onPointerMove);
     window.addEventListener("resize", this.onResize);
 
+    /* loop */
+
+    this.clock = new THREE.Clock();
+
+    this.frame = null;
+
     this.renderLoop = this.renderLoop.bind(this);
+
     this.renderLoop();
   }
 
@@ -233,14 +222,15 @@ export class LudoScene {
     }
 
     const delta = this.clock.getDelta();
+    const elapsedTime = this.clock.getElapsedTime();
 
-    if (this.tokens?.update) {
-      this.tokens.update(delta);
-    }
-
-    this.forest.update(this.clock.getElapsedTime());
+    this.forest.update(elapsedTime);
 
     this.effects.update(delta);
+
+    if (this.tokens && typeof this.tokens.update === "function") {
+      this.tokens.update(elapsedTime, delta);
+    }
 
     this.rig.update();
 
@@ -248,44 +238,20 @@ export class LudoScene {
   }
 
   setQualityTier(tier) {
-    this.userPreferenceTier = tier;
-    const targetTier = tier === QUALITY_TIERS.AUTO ? detectHardwareTier() : tier;
-
-    if (tier === QUALITY_TIERS.AUTO) {
-      this.perfMonitor.reset();
-    } else {
-      this.perfMonitor.stop();
-    }
-
-    this.applyEffectiveTier(targetTier);
-  }
-
-  applyEffectiveTier(tier) {
-    if (this.qualityTier === tier && this.hasAppliedTier) return;
     this.qualityTier = tier;
-    this.hasAppliedTier = true;
-
     const isMobile = window.innerWidth < 768;
 
-    if (tier === QUALITY_TIERS.LOW) {
+    if (tier === QUALITY_TIERS.LIGHT) {
       this.renderer.shadowMap.enabled = false;
       this.renderer.setPixelRatio(1.0);
-    } else if (tier === QUALITY_TIERS.MEDIUM) {
+    } else if (tier === QUALITY_TIERS.ULTRA) {
       this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.BasicShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3.0));
     } else {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
-    }
-
-    if (this.sunLight) {
-      this.sunLight.castShadow = tier !== QUALITY_TIERS.LOW;
-      if (this.sunLight.shadow) {
-        this.sunLight.shadow.mapSize.width = tier === QUALITY_TIERS.HIGH ? 2048 : 1024;
-        this.sunLight.shadow.mapSize.height = tier === QUALITY_TIERS.HIGH ? 2048 : 1024;
-      }
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     }
 
     if (this.forest) {
@@ -311,8 +277,15 @@ export class LudoScene {
 
     this.renderer.setSize(clientWidth, clientHeight);
 
-    const maxDpr = this.qualityTier === QUALITY_TIERS.LOW ? 1.0 : this.qualityTier === QUALITY_TIERS.MEDIUM ? 1.5 : 3.0;
+    const maxDpr =
+      this.qualityTier === QUALITY_TIERS.LIGHT ? 1.0 : this.qualityTier === QUALITY_TIERS.ULTRA ? 3.0 : 2.0;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr));
+  }
+
+  /** Brightness is a 60–140% exposure multiplier over the scene's base look. */
+  setBrightness(percent) {
+    this.brightness = percent;
+    this.renderer.toneMappingExposure = this.baseExposure * (percent / 100);
   }
 
   /* ------------------------------------------------------ */
@@ -421,35 +394,9 @@ export class LudoScene {
       this.forest.forest.visible = mode !== "2d";
     }
 
-    const isMobile = window.innerWidth < 768;
-
-    // Dynamic 3D Dice & Turn Disc repositioning for 2D vs 3D views
-    if (this.dice && this.dice.diceGroup) {
-      const is2D = mode === "2d";
-      const targetX = is2D ? 0 : 7;
-      const targetZ = is2D ? 7.6 : -0.2;
-
-      gsap.to(this.dice.diceGroup.position, {
-        x: targetX,
-        z: targetZ,
-        duration: 0.6,
-        ease: "power2.inOut",
-      });
-
-      if (this.dice.turnDisc) {
-        gsap.to(this.dice.turnDisc.position, {
-          x: targetX,
-          z: targetZ,
-          duration: 0.6,
-          ease: "power2.inOut",
-        });
-      }
-    }
-
     switch (mode) {
       case "2d":
-        // Zoomed-out top-down 2D view fitting both Ludo board AND bottom dice in frame
-        this.rig.setAngle(1.54, 0, isMobile ? 29.5 : 25.5, 0.4);
+        this.rig.setAngle(1.48, 0, 21.5, 0);
         break;
       case "close":
       case "closest":
@@ -485,6 +432,10 @@ export class LudoScene {
 
   setTurnColor(color) {
     this.dice.setTurnColor(color);
+  }
+
+  setCharacterPawn(charId) {
+    this.tokens?.setCharacter(charId);
   }
 
   /** Shows the pulsing ring under exactly these tokens. */
@@ -627,6 +578,7 @@ export class LudoScene {
 
     if (result.finished) {
       playTokenFinish();
+      mesh.userData.animator?.play(ANIMATION_KEYS.TALKING, { loop: THREE.LoopRepeat, duration: 0.3 });
       const pos = baseWorldPosition({ color, slot, position: result.to });
       this.effects.triggerConfetti({ x: pos.x, y: TOKEN_HEIGHT + 0.5, z: pos.z }, 45);
     }
@@ -650,26 +602,27 @@ export class LudoScene {
     const target = baseWorldPosition({ color, slot, position: 0 });
 
     gsap.killTweensOf(mesh.position);
-    gsap.killTweensOf(mesh.rotation);
+    mesh.userData.isMoving = true;
+    mesh.userData.animator?.play(ANIMATION_KEYS.JUMP, { duration: 0.2 });
 
     playTokenSpawn();
 
-    const dx = target.x - mesh.position.x;
-    const dz = target.z - mesh.position.z;
-    if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
-      const targetAngle = Math.atan2(dx, dz);
-      gsap.to(mesh.rotation, { y: targetAngle, duration: 0.2, ease: "power1.out" });
-    }
-
     return new Promise((resolve) => {
+      const dx = target.x - mesh.position.x;
+      const dz = target.z - mesh.position.z;
+      const angle = Math.atan2(dx, dz);
+
       gsap
         .timeline({
           onComplete: () => {
             this.effects.triggerHopRipple(target, COLORS[color]);
             this.triggerSquashBounce(mesh);
+            mesh.userData.isMoving = false;
+            mesh.userData.animator?.play(ANIMATION_KEYS.IDLE, { duration: 0.3 });
             resolve();
           },
         })
+        .to(mesh.rotation, { y: angle, duration: 0.2, ease: "power1.out" }, 0)
         .to(mesh.position, { y: 1.6, duration: 0.22, ease: "power2.out" })
         .to(mesh.position, {
           x: target.x,
@@ -685,38 +638,17 @@ export class LudoScene {
     });
   }
 
-  /** One hop per square with character facing orientation, realistic skeletal leg stepping, and arm swing walking. */
+  /** One hop per square, so a move reads as a count. */
   hopAlong(mesh, color, slot, path) {
     gsap.killTweensOf(mesh.position);
-    gsap.killTweensOf(mesh.rotation);
-
-    const bones = mesh.userData.bones || {};
-    const idleAction = mesh.userData.idleAction;
-
-    if (idleAction) {
-      idleAction.fadeOut(0.1);
-    }
-
-    const resetBones = () => {
-      if (bones.leftUpLeg) gsap.to(bones.leftUpLeg.rotation, { x: 0, duration: 0.15 });
-      if (bones.rightUpLeg) gsap.to(bones.rightUpLeg.rotation, { x: 0, duration: 0.15 });
-      if (bones.leftKnee) gsap.to(bones.leftKnee.rotation, { x: 0, duration: 0.15 });
-      if (bones.rightKnee) gsap.to(bones.rightKnee.rotation, { x: 0, duration: 0.15 });
-      if (bones.leftArm) gsap.to(bones.leftArm.rotation, { x: 0, duration: 0.15 });
-      if (bones.rightArm) gsap.to(bones.rightArm.rotation, { x: 0, duration: 0.15 });
-
-      if (idleAction) {
-        idleAction.reset();
-        idleAction.fadeIn(0.15);
-        idleAction.play();
-      }
-    };
+    mesh.userData.isMoving = true;
+    mesh.userData.animator?.play(ANIMATION_KEYS.RUNNING, { loop: THREE.LoopRepeat, timeScale: 1.4 });
 
     return new Promise((resolve) => {
       const timeline = gsap.timeline({
         onComplete: () => {
-          gsap.to(mesh.rotation, { z: 0, x: 0, duration: 0.15, ease: "power2.out" });
-          resetBones();
+          mesh.userData.isMoving = false;
+          mesh.userData.animator?.play(ANIMATION_KEYS.IDLE, { duration: 0.3 });
           resolve();
         },
       });
@@ -727,103 +659,34 @@ export class LudoScene {
         timeline.to(mesh.position, {
           x: target.x,
           z: target.z,
-          duration: 0.22,
+          duration: 0.2,
           ease: "power1.inOut",
           onStart: () => {
             playTokenHop(stepIndex, path.length);
-
-            // Orient 3D character puppet to face direction of travel
             const dx = target.x - mesh.position.x;
             const dz = target.z - mesh.position.z;
             if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
-              const targetAngle = Math.atan2(dx, dz);
-              gsap.to(mesh.rotation, {
-                y: targetAngle,
-                duration: 0.12,
-                ease: "power1.out",
-              });
-            }
-
-            // Subtle, Natural Human Step Walking Animations
-            const isLeftStep = stepIndex % 2 === 0;
-            if (bones.leftUpLeg) {
-              gsap.to(bones.leftUpLeg.rotation, {
-                x: isLeftStep ? 0.32 : -0.18,
-                duration: 0.11,
-                ease: "sine.inOut",
-              });
-            }
-            if (bones.rightUpLeg) {
-              gsap.to(bones.rightUpLeg.rotation, {
-                x: isLeftStep ? -0.18 : 0.32,
-                duration: 0.11,
-                ease: "sine.inOut",
-              });
-            }
-            if (bones.leftKnee) {
-              gsap.to(bones.leftKnee.rotation, {
-                x: isLeftStep ? 0.22 : 0.02,
-                duration: 0.11,
-                ease: "sine.inOut",
-              });
-            }
-            if (bones.rightKnee) {
-              gsap.to(bones.rightKnee.rotation, {
-                x: isLeftStep ? 0.02 : 0.22,
-                duration: 0.11,
-                ease: "sine.inOut",
-              });
-            }
-            // Arms stay resting naturally by the side (minimal swing)
-            if (bones.leftArm) {
-              gsap.to(bones.leftArm.rotation, {
-                x: isLeftStep ? -0.02 : 0.02,
-                duration: 0.11,
-                ease: "sine.inOut",
-              });
-            }
-            if (bones.rightArm) {
-              gsap.to(bones.rightArm.rotation, {
-                x: isLeftStep ? 0.02 : -0.02,
-                duration: 0.11,
-                ease: "sine.inOut",
-              });
+              const angle = Math.atan2(dx, dz);
+              gsap.to(mesh.rotation, { y: angle, duration: 0.12, ease: "power1.out" });
             }
           },
         });
 
-        // 1. Subtle Forward Lean & Step Lift
         timeline.to(
           mesh.position,
-          { y: TOKEN_HEIGHT + 0.18, duration: 0.11, ease: "power2.out" },
-          "<",
-        );
-        timeline.to(
-          mesh.rotation,
-          {
-            x: 0.06, // Gentle forward lean while walking
-            z: stepIndex % 2 === 0 ? 0.05 : -0.05, // Subtle hip sway
-            duration: 0.11,
-            ease: "sine.inOut",
-          },
+          { y: 1.15, duration: 0.1, ease: "power2.out" },
           "<",
         );
 
-        // 2. Landing Step Impact
         timeline.to(mesh.position, {
           y: TOKEN_HEIGHT,
-          duration: 0.11,
+          duration: 0.1,
           ease: "bounce.out",
           onComplete: () => {
             this.effects.triggerHopRipple(target, COLORS[color]);
             this.triggerSquashBounce(mesh);
           },
         });
-        timeline.to(
-          mesh.rotation,
-          { x: 0.0, z: 0.0, duration: 0.11, ease: "sine.out" },
-          "<",
-        );
       });
     });
   }
@@ -862,16 +725,8 @@ export class LudoScene {
     this.animating.add(tokenId);
 
     gsap.killTweensOf(mesh.position);
-    gsap.killTweensOf(mesh.rotation);
 
     playTokenCapture();
-
-    const dx = target.x - mesh.position.x;
-    const dz = target.z - mesh.position.z;
-    if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
-      const targetAngle = Math.atan2(dx, dz);
-      gsap.to(mesh.rotation, { y: targetAngle, duration: 0.2, ease: "power1.out" });
-    }
 
     return new Promise((resolve) => {
       gsap

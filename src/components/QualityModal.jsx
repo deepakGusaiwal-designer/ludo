@@ -1,17 +1,47 @@
 import { useState, useEffect } from "react";
-import { Cancel01Icon, CpuIcon, FlashIcon, SparklesIcon } from "hugeicons-react";
+import { Cancel01Icon, CpuIcon, FlashIcon, Sun01Icon, SparklesIcon } from "hugeicons-react";
 import {
   getSavedQualityPreference,
   saveQualityPreference,
+  getSavedBrightness,
+  saveBrightness,
+  BRIGHTNESS_MIN,
+  BRIGHTNESS_MAX,
   QUALITY_TIERS,
 } from "../scene/performanceManager.js";
+import { useModalPhysics } from "../hooks/useModalPhysics.js";
+import { GsapRadio, GsapSlider } from "./GsapFormControls.jsx";
+
+const PRESETS = [
+  {
+    tier: QUALITY_TIERS.ULTRA,
+    icon: SparklesIcon,
+    title: "Ultra",
+    desc: "Densest forest, 4K soft shadows & every visual flourish on",
+  },
+  {
+    tier: QUALITY_TIERS.HIGH,
+    icon: FlashIcon,
+    title: "High (Default)",
+    desc: "Full soft shadows, rich foliage & a balanced, smooth frame rate",
+  },
+  {
+    tier: QUALITY_TIERS.LIGHT,
+    icon: CpuIcon,
+    title: "Light",
+    desc: "No shadow maps, lightweight scenery — fastest on any device",
+  },
+];
 
 export function QualityModal({ isOpen, onClose, sceneRef }) {
-  const [selectedQuality, setSelectedQuality] = useState(QUALITY_TIERS.AUTO);
+  const modalRef = useModalPhysics();
+  const [selectedQuality, setSelectedQuality] = useState(QUALITY_TIERS.HIGH);
+  const [brightness, setBrightness] = useState(100);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedQuality(getSavedQualityPreference());
+      setBrightness(getSavedBrightness());
     }
   }, [isOpen]);
 
@@ -21,14 +51,22 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
     if (sceneRef && sceneRef.current) {
       sceneRef.current.setQualityTier(tier);
     }
-    onClose();
+  };
+
+  const handleBrightnessChange = (val) => {
+    const value = Number(val);
+    setBrightness(value);
+    saveBrightness(value);
+    if (sceneRef && sceneRef.current) {
+      sceneRef.current.setBrightness(value);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="glass-modal-overlay">
-      <div className="glass-modal-card">
+      <div className="glass-modal-card" ref={modalRef}>
         <button
           type="button"
           className="modal-close-icon-btn"
@@ -39,62 +77,46 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
         </button>
 
         <div className="glass-modal-icon">
-          <CpuIcon size={38} color="#3b71ef" />
+          <CpuIcon size={38} color="#f2b544" />
         </div>
 
         <h3 className="glass-modal-title">Graphics Performance</h3>
         <p className="glass-modal-desc">
-          Choose a graphics quality preset to optimize 3D performance on your mobile phone or desktop device.
+          Choose a graphics quality preset and adjust brightness to fine-tune 3D performance and look.
         </p>
 
-        <div className="quality-preset-grid">
-          <button
-            type="button"
-            className={`quality-preset-btn ${selectedQuality === QUALITY_TIERS.AUTO ? "active" : ""}`}
-            onClick={() => handleSelectQuality(QUALITY_TIERS.AUTO)}
-          >
-            <SparklesIcon size={20} />
-            <div className="quality-info">
-              <strong>Auto (Recommended)</strong>
-              <span>Auto-detects hardware & auto-adjusts if FPS drops below 30</span>
-            </div>
-          </button>
+        <div className="quality-radio-group">
+          {PRESETS.map(({ tier, icon: Icon, title, desc }) => (
+            <GsapRadio
+              key={tier}
+              name="quality"
+              value={tier}
+              checked={selectedQuality === tier}
+              onChange={() => handleSelectQuality(tier)}
+              className="quality-radio-card"
+            >
+              <span className="quality-radio-icon">
+                <Icon size={20} />
+              </span>
+              <span className="quality-radio-info">
+                <strong>{title}</strong>
+                <span>{desc}</span>
+              </span>
+            </GsapRadio>
+          ))}
+        </div>
 
-          <button
-            type="button"
-            className={`quality-preset-btn ${selectedQuality === QUALITY_TIERS.HIGH ? "active" : ""}`}
-            onClick={() => handleSelectQuality(QUALITY_TIERS.HIGH)}
-          >
-            <SparklesIcon size={20} />
-            <div className="quality-info">
-              <strong>High Quality</strong>
-              <span>Full 3D soft shadows, maximum grass, 14 sky clouds & high resolution</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className={`quality-preset-btn ${selectedQuality === QUALITY_TIERS.MEDIUM ? "active" : ""}`}
-            onClick={() => handleSelectQuality(QUALITY_TIERS.MEDIUM)}
-          >
-            <FlashIcon size={20} />
-            <div className="quality-info">
-              <strong>Medium (Balanced)</strong>
-              <span>Basic shadows, medium foliage density & balanced battery usage</span>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className={`quality-preset-btn ${selectedQuality === QUALITY_TIERS.LOW ? "active" : ""}`}
-            onClick={() => handleSelectQuality(QUALITY_TIERS.LOW)}
-          >
-            <CpuIcon size={20} />
-            <div className="quality-info">
-              <strong>Low (Fastest 60 FPS)</strong>
-              <span>No shadow maps, lightweight foliage — smooth on any budget phone</span>
-            </div>
-          </button>
+        <div className="brightness-control">
+          <GsapSlider
+            value={brightness}
+            min={BRIGHTNESS_MIN}
+            max={BRIGHTNESS_MAX}
+            step={5}
+            onChange={handleBrightnessChange}
+            icon={Sun01Icon}
+            label="Brightness"
+            unit="%"
+          />
         </div>
       </div>
     </div>

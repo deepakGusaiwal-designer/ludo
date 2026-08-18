@@ -5,6 +5,8 @@
  * ensuring every team gets a fair opportunity to release tokens and play.
  */
 
+import { YARD } from "./constants.js";
+
 // Track consecutive non-6 rolls per color while trapped in yard
 const yardPityCounters = {
   red: 0,
@@ -51,13 +53,16 @@ export function getFairRoll(color, tokens = []) {
     return 1 + Math.floor(Math.random() * 6);
   }
 
-  // Count active tokens on board (not in yard and not finished)
+  // Count active tokens on board (not in yard and not finished).
+  // Token positions are the numeric YARD sentinel, not the
+  // string "yard" — comparing against the string here always
+  // failed, which silently disabled the whole pity system.
   const activeTokensOnBoard = tokens.filter(
-    (t) => t.color === color && t.position !== "yard" && !t.finished,
+    (t) => t.color === color && t.position !== YARD && !t.finished,
   ).length;
 
   const yardTokens = tokens.filter(
-    (t) => t.color === color && t.position === "yard",
+    (t) => t.color === color && t.position === YARD,
   ).length;
 
   // Pity Trigger: Player has yard tokens AND no active tokens on the board

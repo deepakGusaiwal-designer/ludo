@@ -7,6 +7,7 @@ import {
 } from "hugeicons-react";
 import { PLAYER_COLORS, labelFor } from "../game/constants.js";
 import { GsapRadio, GsapSelect } from "./GsapFormControls.jsx";
+import { useModalPhysics } from "../hooks/useModalPhysics.js";
 
 const CONTROLLER_OPTIONS = [
   { value: "human", label: "👤 Human Player" },
@@ -74,6 +75,7 @@ const PRESETS = [
 ];
 
 export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
+  const modalRef = useModalPhysics();
   const [selectedPreset, setSelectedPreset] = useState("vs_bots");
   const [difficulty, setDifficulty] = useState(
     currentConfig?.difficulty || "smart",
@@ -126,7 +128,7 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
 
   return (
     <div className="glass-modal-overlay">
-      <div className="glass-modal-card lobby-card">
+      <div className="glass-modal-card lobby-card" ref={modalRef}>
         {onCancel && (
           <button
             type="button"
@@ -138,7 +140,7 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
           </button>
         )}
         <div className="glass-modal-icon">
-          <GameController01Icon size={38} color="#34d399" />
+          <GameController01Icon size={38} color="#f2b544" />
         </div>
         <h2 className="glass-modal-title">Game Setup & Players</h2>
         <p className="glass-modal-desc">
@@ -160,33 +162,53 @@ export function LobbyModal({ isOpen, currentConfig, onStartMatch, onCancel }) {
           ))}
         </div>
 
-        {/* Custom Color & Controller Settings */}
+        {/* Custom Color Settings */}
         <div className="lobby-color-settings">
-          <h4 className="lobby-section-title">Color Controller & Name Setup</h4>
-          <div className="lobby-color-grid">
-            {PLAYER_COLORS.map((color) => (
-              <div key={color} className={`lobby-color-card ${color} ${controllers[color] === "off" ? "disabled" : ""}`}>
-                <div className="lobby-color-header">
-                  <div className={`lobby-color-badge ${color}`}>
-                    {labelFor(color)}
+          <div className="lobby-section-header">
+            <h4 className="lobby-section-title">Color Controller & Name Setup</h4>
+            <span className="lobby-section-hint">Customize player names & control types</span>
+          </div>
+          <div className="lobby-color-list">
+            {PLAYER_COLORS.map((color) => {
+              const isDisabled = controllers[color] === "off";
+              return (
+                <div
+                  key={color}
+                  className={`lobby-player-card ${color} ${isDisabled ? "is-disabled" : ""}`}
+                >
+                  <div className="lobby-player-header">
+                    <div className={`lobby-color-badge ${color}`}>
+                      <span className="badge-dot" />
+                      <span className="badge-name">{labelFor(color)}</span>
+                    </div>
+                    <span className="lobby-status-label">
+                      {isDisabled ? "Disabled" : controllers[color] === "computer" ? "🤖 AI Bot" : "👤 Human"}
+                    </span>
                   </div>
-                  <GsapSelect
-                    value={controllers[color] || "human"}
-                    onChange={(val) => handleControllerChange(color, val)}
-                    options={CONTROLLER_OPTIONS}
-                    className="lobby-select-gsap"
-                  />
+
+                  <div className="lobby-player-inputs">
+                    <div className="lobby-input-wrapper">
+                      <input
+                        type="text"
+                        className="lobby-name-input"
+                        placeholder={`${labelFor(color)} Name`}
+                        value={names[color] || ""}
+                        onChange={(e) => handleNameChange(color, e.target.value)}
+                        disabled={isDisabled}
+                      />
+                    </div>
+                    <div className="lobby-select-wrapper">
+                      <GsapSelect
+                        value={controllers[color] || "human"}
+                        onChange={(val) => handleControllerChange(color, val)}
+                        options={CONTROLLER_OPTIONS}
+                        className="lobby-select-gsap"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  className="lobby-name-input"
-                  placeholder={`${labelFor(color)} Player Name`}
-                  value={names[color] || ""}
-                  onChange={(e) => handleNameChange(color, e.target.value)}
-                  disabled={controllers[color] === "off"}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

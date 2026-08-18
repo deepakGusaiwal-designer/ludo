@@ -1,38 +1,22 @@
 /**
- * Performance Manager & Hardware Tier Detector
+ * Performance Manager: graphics quality presets and brightness.
  */
 
 export const QUALITY_TIERS = {
+  ULTRA: "ultra",
   HIGH: "high",
-  MEDIUM: "medium",
-  LOW: "low",
-  AUTO: "auto",
+  LIGHT: "light",
 };
 
 const STORAGE_KEY = "ludo_graphics_quality";
 
-export function detectHardwareTier() {
-  if (typeof window === "undefined") return "high";
-  const isMobile = window.innerWidth < 768;
-  const memory = (typeof navigator !== "undefined" && navigator.deviceMemory) || 4;
-  const cores = (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
-
-  if (isMobile && (memory <= 2 || cores <= 2)) {
-    return "low";
-  }
-  if (isMobile) {
-    return "medium";
-  }
-  return "high";
-}
-
 export function getSavedQualityPreference() {
-  if (typeof localStorage === "undefined") return "auto";
+  if (typeof localStorage === "undefined") return QUALITY_TIERS.HIGH;
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved === "high" || saved === "medium" || saved === "low" || saved === "auto") {
+  if (saved === QUALITY_TIERS.ULTRA || saved === QUALITY_TIERS.HIGH || saved === QUALITY_TIERS.LIGHT) {
     return saved;
   }
-  return "auto";
+  return QUALITY_TIERS.HIGH;
 }
 
 export function saveQualityPreference(tier) {
@@ -41,23 +25,38 @@ export function saveQualityPreference(tier) {
   }
 }
 
-export class PerformanceMonitor {
-  constructor(onDownscale, onUpscale) {
-    this.onDownscale = onDownscale;
-    this.onUpscale = onUpscale;
-    this.frameCount = 0;
-    this.lastTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-    this.lowFpsDuration = 0;
-    this.highFpsDuration = 0;
-    this.enabled = true;
-    this.currentFps = 60;
-  }
+/* ---------------------------------------------------------
+   Brightness — a simple exposure multiplier, stored as a
+   percentage (100 = the scene's normal exposure).
+--------------------------------------------------------- */
 
-  reset() {
+const BRIGHTNESS_KEY = "ludo_graphics_brightness";
+
+export const BRIGHTNESS_MIN = 60;
+export const BRIGHTNESS_MAX = 140;
+export const BRIGHTNESS_DEFAULT = 100;
+
+export function getSavedBrightness() {
+  if (typeof localStorage === "undefined") return BRIGHTNESS_DEFAULT;
+  const saved = Number(localStorage.getItem(BRIGHTNESS_KEY));
+  if (Number.isFinite(saved) && saved >= BRIGHTNESS_MIN && saved <= BRIGHTNESS_MAX) {
+    return saved;
+  }
+  return BRIGHTNESS_DEFAULT;
+}
+
+export function saveBrightness(percent) {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(BRIGHTNESS_KEY, String(percent));
+  }
+}
+
+export class PerformanceMonitor {
+  constructor(onDownscale) {
+    this.onDownscale = onDownscale;
     this.frameCount = 0;
     this.lastTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.lowFpsDuration = 0;
-    this.highFpsDuration = 0;
     this.enabled = true;
   }
 
@@ -69,35 +68,20 @@ export class PerformanceMonitor {
 
     if (delta >= 1000) {
       const fps = (this.frameCount * 1000) / delta;
-      this.currentFps = Math.round(fps);
       this.frameCount = 0;
       this.lastTime = time;
 
       if (fps < 30) {
         this.lowFpsDuration += 1;
-        this.highFpsDuration = 0;
-
-        // Downscale graphics tier after 2 consecutive low FPS seconds
-        if (this.lowFpsDuration >= 2) {
+        if (this.lowFpsDuration >= 3) {
           this.lowFpsDuration = 0;
+          this.enabled = false;
           if (typeof this.onDownscale === "function") {
-            this.onDownscale(this.currentFps);
-          }
-        }
-      } else if (fps > 55) {
-        this.highFpsDuration += 1;
-        this.lowFpsDuration = 0;
-
-        // Upscale graphics tier if performance remains consistently 55+ FPS for 10s
-        if (this.highFpsDuration >= 10) {
-          this.highFpsDuration = 0;
-          if (typeof this.onUpscale === "function") {
-            this.onUpscale(this.currentFps);
+            this.onDownscale();
           }
         }
       } else {
         this.lowFpsDuration = 0;
-        this.highFpsDuration = 0;
       }
     }
   }
