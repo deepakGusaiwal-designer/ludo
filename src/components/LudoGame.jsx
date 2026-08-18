@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CpuIcon, Globe02Icon, RefreshIcon, Settings02Icon, UserIcon } from "hugeicons-react";
+import { Toaster, toast } from "sonner";
 
 import { useLudoGame } from "../hooks/useLudoGame.js";
 import { useLudoScene } from "../hooks/useLudoScene.js";
@@ -13,7 +14,6 @@ import { OnlineLobbyModal } from "./OnlineLobbyModal.jsx";
 import { Preloader } from "./Preloader.jsx";
 import { QualityModal } from "./QualityModal.jsx";
 import { ResetModal } from "./ResetModal.jsx";
-import { Scoreboard } from "./Scoreboard.jsx";
 import { TurnPanel } from "./TurnPanel.jsx";
 import { WinOverlay } from "./WinOverlay.jsx";
 
@@ -28,7 +28,6 @@ export function LudoGame() {
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
-  const [roomCopied, setRoomCopied] = useState(false);
 
   const onlineState = useOnlineLudo();
 
@@ -45,11 +44,16 @@ export function LudoGame() {
     startNewMatch,
   } = useLudoGame(sceneRef, ready, onlineState);
 
+  useEffect(() => {
+    if (onlineState.notification) {
+      toast.info(onlineState.notification, { duration: 2500 });
+    }
+  }, [onlineState.notification]);
+
   const handleCopyRoomCode = () => {
     if (onlineState?.room?.code) {
       navigator.clipboard.writeText(onlineState.room.code);
-      setRoomCopied(true);
-      setTimeout(() => setRoomCopied(false), 2000);
+      toast.success(`Room Code ${onlineState.room.code} copied!`, { duration: 1500 });
     }
   };
 
@@ -69,10 +73,15 @@ export function LudoGame() {
   const handleStartOnlineMatch = useCallback(
     (roomConfig) => {
       setIsOnlineModalOpen(false);
+      const namesObj = {};
+      roomConfig.players?.forEach((p) => {
+        if (p.color && p.name) namesObj[p.color] = p.name;
+      });
       startNewMatch({
         difficulty: roomConfig.difficulty || "smart",
         controllers: roomConfig.controllers,
-        activeCount: roomConfig.players.length,
+        names: namesObj,
+        activeCount: roomConfig.players?.length || 2,
       });
     },
     [startNewMatch],
@@ -83,12 +92,41 @@ export function LudoGame() {
       <Preloader isReady={ready} />
       <div className="canvas-host" ref={containerRef} />
 
+      {/* Modern Sonner Toast Container (Compact, Subtle & Offset Below Header) */}
+      <Toaster
+        position="top-center"
+        offset="68px"
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: "rgba(10, 22, 17, 0.82)",
+            border: "1px solid rgba(255, 255, 255, 0.18)",
+            color: "#f1f5f9",
+            fontWeight: 700,
+            fontSize: "12px",
+            padding: "5px 14px",
+            minHeight: "32px",
+            width: "fit-content",
+            borderRadius: "999px",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: "0 6px 18px rgba(0, 0, 0, 0.35)",
+            margin: "0 auto",
+            letterSpacing: "0.01em",
+          },
+        }}
+      />
+
       <header className="hud">
         <div className="hud-brand">
           <img src="/logo.png" alt="Ludo Logo" className="hud-logo" />
-          {/* <div className="hud-title">Forest Ludo</div> */}
           {onlineState.room && (
-            <div className="online-room-badge">
+            <div
+              className="online-room-badge"
+              onClick={handleCopyRoomCode}
+              style={{ cursor: "pointer" }}
+              title="Click to copy Room Code"
+            >
               Room: <strong>{onlineState.room.code}</strong>
             </div>
           )}
@@ -130,20 +168,8 @@ export function LudoGame() {
         <AudioToggle />
       </div>
 
-      {/* Floating Bottom-Right Controls: Hero Pawn, Graphics & Room Badge */}
+      {/* Floating Bottom-Right Controls: Hero Pawn & Graphics (Single Room Badge in Header Only) */}
       <div className="hud-corner-right">
-        {onlineState.room && (
-          <div
-            className={`bottom-right-room-badge ${roomCopied ? "copied" : ""}`}
-            onClick={handleCopyRoomCode}
-            title="Click to copy Room Code"
-          >
-            <Globe02Icon size={13} color="#38bdf8" />
-            <span className="badge-room-label">ROOM:</span>
-            <span className="badge-room-code">{onlineState.room.code}</span>
-            {roomCopied && <span className="badge-copied-toast">Copied!</span>}
-          </div>
-        )}
         <button
           type="button"
           className="icon-hud-btn hero-hud-btn"
@@ -164,14 +190,8 @@ export function LudoGame() {
         </button>
       </div>
 
-      {/* <Scoreboard state={state} playerConfig={playerConfig} onlineState={onlineState} /> */}
-
       <TurnPanel
         state={state}
-        dice={dice}
-        message={message}
-        canRoll={canRoll}
-        onRoll={roll}
         playerConfig={playerConfig}
         onlineState={onlineState}
       />

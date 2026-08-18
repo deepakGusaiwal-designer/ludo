@@ -301,8 +301,13 @@ export class LudoScene {
     this.raycaster.setFromCamera(this.pointer, this.camera);
   }
 
+  syncActiveControllers(controllers) {
+    this.tokens?.syncActiveControllers(controllers);
+  }
+
   pickToken() {
-    const hits = this.raycaster.intersectObjects(this.tokens.all, true);
+    const activeTokens = this.tokens.all.filter((t) => t.visible);
+    const hits = this.raycaster.intersectObjects(activeTokens, true);
 
     if (!hits.length) return null;
 

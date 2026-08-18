@@ -306,14 +306,31 @@ export function createTokens(boardGroup, initialCharacterId = null) {
     getCharacter() {
       return currentCharacterId;
     },
+    syncActiveControllers(controllers) {
+      if (!controllers) return;
+      for (const [id, group] of byId.entries()) {
+        const color = group.userData.color;
+        const isActive = controllers[color] !== "off";
+        if (group.visible !== isActive) {
+          group.visible = isActive;
+          if (isActive) {
+            gsap.fromTo(
+              group.scale,
+              { x: 0.4, y: 0.4, z: 0.4 },
+              { x: 1, y: 1, z: 1, duration: 0.3, ease: "back.out(1.8)" },
+            );
+          }
+        }
+      }
+    },
     update(elapsedTime, delta) {
       let index = 0;
       for (const [id, group] of byId.entries()) {
+        if (!group.visible) continue;
         index++;
 
-        // Update AnimationMixer
+        // Update AnimationMixer directly with zero per-frame binding overhead
         if (group.userData.animator) {
-          group.userData.animator.bindClips();
           group.userData.animator.update(delta);
         }
 

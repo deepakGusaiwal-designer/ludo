@@ -207,7 +207,7 @@ export function GsapSelect({ value, onChange, options = [], className = "" }) {
   }, []);
 
   return (
-    <div className={`gsap-select-container ${className}`}>
+    <div className={`gsap-select-container ${isOpen ? "is-open" : ""} ${className}`}>
       <button
         ref={triggerRef}
         type="button"
