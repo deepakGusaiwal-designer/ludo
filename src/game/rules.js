@@ -9,7 +9,8 @@
  *   - a 6 earns another roll, three in a row forfeits the turn
  *   - capturing an opponent earns another roll
  *   - bringing a token home earns another roll
- *   - the eight starred squares are safe from capture
+ *   - the eight safe squares (four colored starts + four stars)
+ *     block capture absolutely, entry from the yard included
  *   - two tokens of one color form a block that opponents can
  *     neither pass nor land on
  *   - a token must reach home on an exact roll
@@ -268,10 +269,12 @@ export function applyMove(state, tokenId, dice) {
   if (isOnRing(moved)) {
     const landing = ringIndexOf(moved);
 
-    // Safe squares block capture — except a start square doesn't
-    // protect an opponent from the square's own owner entering
-    // onto it. A single move can capture at most one token.
-    if (!SAFE_TRACK_INDEXES.has(landing) || entered) {
+    // The eight safe squares (four colored starts + four stars)
+    // block capture absolutely — even entering from the yard onto
+    // your own start square leaves an opponent resting there
+    // untouched; the two simply share the square. A single move
+    // can capture at most one token.
+    if (!SAFE_TRACK_INDEXES.has(landing)) {
       const victim = tokens.find(
         (each) =>
           each.id !== moved.id &&
