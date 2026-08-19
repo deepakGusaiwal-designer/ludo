@@ -341,26 +341,65 @@ test("your own token is never captured", () => {
   assert.equal(tokenAt(result.state, "red-1").position, 4);
 });
 
-test("entering your own start square captures a lone opponent resting there", () => {
+test("entering your own start square never captures — the opponent shares it", () => {
   const state = withPositions({
     "green-0": relForRing("green", START_INDEX.red),
   });
 
   const result = applyMove(state, "red-0", 6);
 
-  assert.deepEqual(result.captured, ["green-0"]);
-  assert.equal(tokenAt(result.state, "green-0").position, YARD);
+  assert.deepEqual(result.captured, []);
+  assert.equal(
+    ringIndexOf(tokenAt(result.state, "green-0")),
+    START_INDEX.red,
+    "the opponent stays put on the start square",
+  );
+  assert.equal(ringIndexOf(tokenAt(result.state, "red-0")), START_INDEX.red);
+});
+
+test("no capture happens on any of the eight safe squares", () => {
+  for (const safe of SAFE_TRACK_INDEXES) {
+    // Red walks onto the square from three back — except red's own
+    // start (0), which red can only re-reach by wrapping into its
+    // home lane, so green makes that landing instead. The victim
+    // is always a third color so the mover never owns it.
+    const mover = safe >= 3 ? "red" : "green";
+    const victim = mover === "red" ? "green" : "yellow";
+
+    const to = (safe - START_INDEX[mover] + RING_LENGTH) % RING_LENGTH;
+
+    const state = withPositions({
+      [`${mover}-0`]: to - 3,
+      [`${victim}-0`]: relForRing(victim, safe),
+    });
+
+    const result = applyMove(
+      { ...state, currentPlayer: PLAYER_COLORS.indexOf(mover) },
+      `${mover}-0`,
+      3,
+    );
+
+    assert.equal(ringIndexOf(tokenAt(result.state, `${mover}-0`)), safe);
+    assert.deepEqual(result.captured, [], `capture on safe square ${safe}`);
+    assert.equal(
+      ringIndexOf(tokenAt(result.state, `${victim}-0`)),
+      safe,
+      `opponent survives on safe square ${safe}`,
+    );
+  }
 });
 
 test("a single move never captures more than one token", () => {
-  // two different opponents can share Red's start square safely
-  // until Red enters it — even then, at most one is sent home
+  // A contrived state puts two different opponents on the same
+  // unsafe square; landing there sends at most one home.
+  const unsafe = 4;
   const state = withPositions({
-    "green-0": relForRing("green", START_INDEX.red),
-    "yellow-0": relForRing("yellow", START_INDEX.red),
+    "green-0": relForRing("green", unsafe),
+    "yellow-0": relForRing("yellow", unsafe),
+    "red-0": 1,
   });
 
-  const result = applyMove(state, "red-0", 6);
+  const result = applyMove(state, "red-0", 3);
 
   assert.equal(result.captured.length, 1);
 });

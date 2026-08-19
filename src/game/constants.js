@@ -189,8 +189,14 @@ export const HOME_LANES = {
  */
 export const SAFE_TRACK_INDEXES = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
 
-/** Painted stars, derived from the safe set above. */
-export const STAR_CELLS = [8, 21, 34, 47].map((index) => COMMON_TRACK[index]);
+/**
+ * Painted stars, derived from the safe set above. Every safe
+ * square gets one — start squares included — so "gold star"
+ * is the single visual marker for "capture cannot happen here".
+ */
+export const STAR_CELLS = [...SAFE_TRACK_INDEXES].map(
+  (index) => COMMON_TRACK[index],
+);
 
 /** Start square and home lane entrance painted per color. */
 export const MARKED_CELLS = Object.fromEntries(

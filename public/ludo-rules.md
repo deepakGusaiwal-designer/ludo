@@ -98,7 +98,7 @@ SAFE_SQUARES = [0, 8, 13, 21, 26, 34, 39, 47]
 - A token may leave the yard **only on a roll of 6**, and it is placed directly on its start square.
 - Entering costs the whole roll — the 6 is not also spent on movement.
 - Entry is illegal if the start square is already occupied by **two or more** of the player's own tokens (see §7.2). If occupied by one own token, entry is allowed only if stacking is permitted (§11).
-- Entry onto a start square occupied by an opponent token **captures** it, since the start square's safety does not protect against the owner of that start square in most rulesets — see §11 for the toggle.
+- Entry onto a start square occupied by an opponent token does **not** capture it — the start square is a safe square (§3) and its safety is absolute, so the two tokens simply share the square. (`startSquareCapturesOnEntry: false`; see §11 for the toggle.)
 
 ### 5.2 Extra turns
 A player rolls again after:
@@ -195,8 +195,8 @@ if dest not in SAFE_SQUARES and exactly one opponent token on dest:
 1. **Roll of 6 with all tokens in yard and start square blocked by own block** → no legal move, turn ends.
 2. **Roll of 6 with all four tokens home-bound and none able to move** → forfeit, no re-roll.
 3. **Capture on the last legal move of a triple-six sequence** → the third roll is void, so the capture does not stand under the strict variant.
-4. **Two opponents on one square** — impossible unless stacking of mixed colors is enabled; default rules forbid it.
-5. **Token on own start square** is safe from capture but still counts toward the stack limit for entry.
+4. **Two opponents on one square** — possible only on safe squares, where capture never happens and tokens of any color coexist. On unsafe squares, landing captures the lone occupant, so mixed sharing cannot persist.
+5. **Token on any safe square** — own start square included — is safe from capture without exception, but still counts toward the stack limit for entry.
 6. **Simultaneous win condition** cannot occur; turns are strictly sequential.
 7. **Player with zero tokens on the board** simply needs a 6; no penalty applies for repeated failures.
 8. **Disconnected / timed-out player** (online play): auto-play the first legal move, or skip if none. Define a max consecutive-skip count before forfeiting.
@@ -227,7 +227,7 @@ Expose these as a rules config object so the engine can support multiple house r
   "blocksStopOpponentPassage": true,
 
   "safeSquares": [0, 8, 13, 21, 26, 34, 39, 47],
-  "startSquareCapturesOnEntry": true,
+  "startSquareCapturesOnEntry": false,
 
   "exactRollToFinish": true,
   "mustCaptureIfPossible": false,

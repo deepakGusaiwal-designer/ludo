@@ -203,11 +203,18 @@ export function createBoard() {
   const starGeometry = track(new THREE.ExtrudeGeometry(starShape, starExtrudeSettings));
   const starMaterial = getMaterial("#f59e0b", { roughness: 0.25, metalness: 0.85 });
 
+  // Start squares carry a raised colored overlay (top at ~0.675),
+  // so their stars sit above it; the rest lie on the bare track.
+  const startCellKeys = new Set(
+    PLAYER_COLORS.map((color) => MARKED_CELLS[color].start.join(",")),
+  );
+
   for (const [row, col] of STAR_CELLS) {
     const star = new THREE.Mesh(starGeometry, starMaterial);
     const { x, z } = cellToWorld(row, col);
+    const onStartSquare = startCellKeys.has(`${row},${col}`);
     star.rotation.x = -Math.PI / 2;
-    star.position.set(x, 0.648, z);
+    star.position.set(x, onStartSquare ? 0.676 : 0.648, z);
     star.receiveShadow = true;
     boardGroup.add(star);
   }

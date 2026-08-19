@@ -48,8 +48,10 @@ function scoreMove(state, move) {
     score += Math.floor(move.to * 0.5);
   }
 
-  // 6. Escape from a dangerous position (if an opponent is within 6 steps behind)
-  if (token && isOnRing(token)) {
+  // 6. Escape from a dangerous position (if an opponent is within
+  // 6 steps behind). A token already on a safe square cannot be
+  // captured, so it is never counted as vulnerable.
+  if (token && isOnRing(token) && !SAFE_TRACK_INDEXES.has(ringIndexOf(token))) {
     const myIndex = ringIndexOf(token);
 
     const isVulnerable = state.tokens.some((other) => {
