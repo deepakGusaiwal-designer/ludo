@@ -558,6 +558,32 @@ test("a token alone on a square sits exactly on it", () => {
   assert.deepEqual([row, col], expected);
 });
 
+test("a placement reports how many tokens share its square, for the renderer to shrink them", () => {
+  // The renderer (LudoScene.syncPlacements) reads `position.count` to
+  // scale down crowded tokens so they don't visually overlap — this
+  // field silently regressed to `undefined` once before, so it's
+  // pinned here for every group size.
+  const solo = withPositions({ "red-0": 0 });
+  assert.equal(placementsFor(solo.tokens).get("red-0").count, 1);
+
+  const pair = withPositions({ "red-0": 0, "red-1": 0 });
+  assert.equal(placementsFor(pair.tokens).get("red-0").count, 2);
+  assert.equal(placementsFor(pair.tokens).get("red-1").count, 2);
+
+  // Four different colors legally sharing one safe square.
+  const safe = 8;
+  const crowd = withPositions({
+    "red-0": relForRing("red", safe),
+    "green-0": relForRing("green", safe),
+    "yellow-0": relForRing("yellow", safe),
+    "blue-0": relForRing("blue", safe),
+  });
+  const crowdPlacements = placementsFor(crowd.tokens);
+  for (const id of ["red-0", "green-0", "yellow-0", "blue-0"]) {
+    assert.equal(crowdPlacements.get(id).count, 4, `${id} should report count 4`);
+  }
+});
+
 /* ---------- full games ---------- */
 
 /** Plays a whole game using only the pure API. */

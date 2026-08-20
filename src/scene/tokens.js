@@ -31,9 +31,9 @@ import {
 export function createTokens(boardGroup, initialCharacterId = null) {
   let currentCharacterId = initialCharacterId || getSelectedCharacter();
 
-  const bodyGeometry = new THREE.CylinderGeometry(0.20, 0.25, 0.40, 20);
+  const bodyGeometry = new THREE.CylinderGeometry(0.22, 0.275, 0.44, 20);
   const headGeometry = new THREE.SphereGeometry(
-    0.21,
+    0.23,
     16,
     8,
     0,
@@ -41,9 +41,9 @@ export function createTokens(boardGroup, initialCharacterId = null) {
     0,
     Math.PI / 2,
   );
-  const footGeometry = new THREE.CylinderGeometry(0.26, 0.26, 0.07, 20);
+  const footGeometry = new THREE.CylinderGeometry(0.285, 0.285, 0.077, 20);
 
-  const ringGeometry = new THREE.TorusGeometry(0.34, 0.05, 8, 26);
+  const ringGeometry = new THREE.TorusGeometry(0.375, 0.055, 8, 26);
   const ringMaterial = new THREE.MeshStandardMaterial({
     color: "#fff6cf",
     emissive: "#e8c766",
@@ -113,19 +113,44 @@ export function createTokens(boardGroup, initialCharacterId = null) {
     model.traverse((child) => {
       if (!child.isMesh) return;
 
-      const isForbidden = NON_CLOTHING_KEYWORDS.some(
+      const isPants = Boolean(
+        child.name?.toLowerCase().includes("pants") ||
+        child.parent?.name?.toLowerCase().includes("pants") ||
+        child.name === "Roundcube.002"
+      );
+
+      const isForbidden = !isPants && NON_CLOTHING_KEYWORDS.some(
         (kw) => (child.name && child.name.includes(kw)) || (child.material?.name && child.material.name.includes(kw))
       );
       if (isForbidden) return;
 
-      const isClothingMesh = CLOTHING_MESH_KEYWORDS.some((kw) =>
+      const isClothingMesh = isPants || CLOTHING_MESH_KEYWORDS.some((kw) =>
         child.name && child.name.includes(kw)
       );
 
       const processMaterial = (mat) => {
         if (!mat) return mat;
-        const isClothingMat = mat.name && CLOTHING_MATERIAL_NAMES.has(mat.name);
-        const isPeon = mat.name === "Material.001" || child.name.includes("peon") || child.name.includes("Circle");
+
+        if (isPants) {
+          const clonedMat = mat.clone();
+          clonedMat.color = teamThreeColor.clone();
+          if (clonedMat.emissive) {
+            clonedMat.emissive = teamThreeColor.clone().multiplyScalar(0.25);
+          }
+          return clonedMat;
+        }
+
+        const isClothingMat = Boolean(
+          mat?.name && CLOTHING_MATERIAL_NAMES.has(mat.name)
+        );
+        const isPeon =
+          mat?.name === "Material.001" ||
+          child.name.includes("peon") ||
+          child.name.includes("Circle");
+        const isWarriorPawn =
+          child.name?.startsWith("Object_") ||
+          child.parent?.name?.includes("pawn.stl") ||
+          child.name?.includes("pawn.stl");
 
         if (isPeon) {
           const clonedMat = mat.clone();
@@ -137,6 +162,33 @@ export function createTokens(boardGroup, initialCharacterId = null) {
           if ("clearcoat" in clonedMat) {
             clonedMat.clearcoat = 1.0;
             clonedMat.clearcoatRoughness = 0.08;
+          }
+          return clonedMat;
+        }
+
+        if (isWarriorPawn) {
+          const clonedMat = (mat || new THREE.MeshStandardMaterial()).clone();
+          const goldColor = new THREE.Color("#d4a036");
+          // Subtle 12% gold warmth so team color remains crisp and dominant
+          const blendedColor = teamThreeColor.clone().lerp(goldColor, 0.12);
+
+          clonedMat.color = blendedColor;
+          clonedMat.roughness = 0.22; // Smooth glossy armor
+          clonedMat.metalness = 0.38; // Subtle metallic sheen
+          clonedMat.emissive = teamThreeColor.clone().multiplyScalar(0.14);
+          if ("clearcoat" in clonedMat) {
+            clonedMat.clearcoat = 0.65;
+            clonedMat.clearcoatRoughness = 0.10;
+          }
+          return clonedMat;
+        }
+
+        if (mat.name?.includes("tripo") || child.name?.includes("tripo")) {
+          const clonedMat = mat.clone();
+          // Apply team color to rabbit token piece
+          clonedMat.color = teamThreeColor.clone();
+          if (clonedMat.emissive) {
+            clonedMat.emissive = teamThreeColor.clone().multiplyScalar(0.18);
           }
           return clonedMat;
         }
@@ -163,11 +215,11 @@ export function createTokens(boardGroup, initialCharacterId = null) {
   function buildCharacterPawn(template, color) {
     const group = new THREE.Group();
 
-    // Clone 3D character mesh with proper Skeleton and Armature bindings
+    // Clone 3D character mesh directly on board without base disk
     const charModel = cloneCharacterInstance(template);
     if (charModel) {
       applyTeamColorsToModel(charModel, color);
-      charModel.scale.set(1.08, 1.08, 1.08);
+      charModel.scale.set(1.19, 1.19, 1.19);
       charModel.position.y = 0.00;
       group.add(charModel);
 
@@ -268,7 +320,24 @@ export function createTokens(boardGroup, initialCharacterId = null) {
       preloadAnimations().catch(() => {}),
     ]);
 
-    if (!template || currentCharacterId !== charId) return;
+    if (currentCharacterId !== charId) return;
+
+    if (!template) {
+      // Graceful fallback to classic pawn if model failed to load
+      for (const color of PLAYER_COLORS) {
+        for (let slot = 0; slot < TOKENS_PER_PLAYER; slot++) {
+          const id = `${color}-${slot}`;
+          const visual = tokenVisuals.get(id);
+          if (!visual) continue;
+
+          while (visual.children.length > 0) {
+            visual.remove(visual.children[0]);
+          }
+          visual.add(buildClassicPawn(color));
+        }
+      }
+      return;
+    }
 
     for (const color of PLAYER_COLORS) {
       for (let slot = 0; slot < TOKENS_PER_PLAYER; slot++) {

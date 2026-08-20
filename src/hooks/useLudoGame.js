@@ -532,6 +532,7 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
     if (!ready || !scene) return undefined;
 
     scene.onDiceClick(() => {
+      if (machine.current.status !== "idle" || machine.current.state.winner) return;
       const activeColor = currentColor(machine.current.state);
       if (onlineState?.room) {
         if (onlineState.myColor === activeColor) roll();

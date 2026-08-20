@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Cancel01Icon, CpuIcon, FlashIcon, Sun01Icon, SparklesIcon } from "hugeicons-react";
 import {
   getSavedQualityPreference,
@@ -40,6 +40,8 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
   const [selectedQuality, setSelectedQuality] = useState(QUALITY_TIERS.HIGH);
   const [brightness, setBrightness] = useState(100);
 
+  const saveTimeoutRef = useRef(null);
+
   useEffect(() => {
     if (isOpen) {
       setSelectedQuality(getSavedQualityPreference());
@@ -56,12 +58,15 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
   };
 
   const handleBrightnessChange = (val) => {
-    const value = Number(val);
+    const value = Math.round(Number(val));
     setBrightness(value);
-    saveBrightness(value);
     if (sceneRef && sceneRef.current) {
       sceneRef.current.setBrightness(value);
     }
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveBrightness(value);
+    }, 150);
   };
 
   if (!isOpen) return null;
@@ -113,7 +118,7 @@ export function QualityModal({ isOpen, onClose, sceneRef }) {
             value={brightness}
             min={BRIGHTNESS_MIN}
             max={BRIGHTNESS_MAX}
-            step={5}
+            step={1}
             onChange={handleBrightnessChange}
             icon={Sun01Icon}
             label="Brightness"

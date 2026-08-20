@@ -104,12 +104,20 @@ function createRoundedCubeGeometry(size = 1.25, radius = 0.14) {
   return geom;
 }
 
+export const DICE_SPOTS = {
+  red: { x: -5.4, y: 1.2, z: -2.0 },
+  green: { x: 2.0, y: 1.2, z: -5.4 },
+  yellow: { x: 5.4, y: 1.2, z: 2.0 },
+  blue: { x: -2.0, y: 1.2, z: 5.4 },
+};
+
 export function createDice() {
   const diceGroup = new THREE.Group();
-
   diceGroup.name = "Dice";
 
-  diceGroup.position.set(5.8, 1.2, 0.0);
+  let currentColor = "red";
+  const initialPos = DICE_SPOTS.red;
+  diceGroup.position.set(initialPos.x, initialPos.y, initialPos.z);
 
   const bodyGeometry = new THREE.BoxGeometry(1.25, 1.25, 1.25, 6, 6, 6);
 
@@ -175,30 +183,118 @@ export function createDice() {
     diceGroup.add(faceGroup);
   });
 
-  // show a 1 before the first roll
+  // Show a 1 before the first roll
   const initial = FACE_UP_ROTATION[1];
-
   diceGroup.rotation.set(initial.x, initial.y, initial.z);
 
-  /* a colored disc under the dice showing whose turn it is */
+  /* 4 Dedicated Dice Landing Spots on the Table */
+  const landingSpotsGroup = new THREE.Group();
+  landingSpotsGroup.name = "DiceLandingSpots";
 
-  const discMaterial = new THREE.MeshStandardMaterial({
-    color: COLORS.red,
-    roughness: 0.55,
-  });
+  const spotBaseGeo = new THREE.CylinderGeometry(0.92, 0.96, 0.04, 32);
+  const spotRingGeo = new THREE.TorusGeometry(0.90, 0.024, 12, 32);
+  const spotInnerGeo = new THREE.CylinderGeometry(0.76, 0.76, 0.02, 32);
+  const spotHaloGeo = new THREE.RingGeometry(0.92, 1.15, 32);
 
-  const discGeometry = new THREE.CylinderGeometry(0.9, 0.9, 0.05, 32);
+  const spotMeshes = {};
+  const clickableMeshes = [];
 
-  const turnDisc = new THREE.Mesh(discGeometry, discMaterial);
+  for (const color of ["red", "green", "yellow", "blue"]) {
+    const spotPos = DICE_SPOTS[color];
+    const spotGroup = new THREE.Group();
+    spotGroup.name = `DiceSpot-${color}`;
+    spotGroup.position.set(spotPos.x, 0.02, spotPos.z);
 
-  turnDisc.position.set(diceGroup.position.x, 0.03, diceGroup.position.z);
-  turnDisc.receiveShadow = true;
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: "#1c2522",
+      roughness: 0.7,
+      metalness: 0.2,
+    });
+    const baseMesh = new THREE.Mesh(spotBaseGeo, baseMat);
+    baseMesh.receiveShadow = true;
+    spotGroup.add(baseMesh);
+    clickableMeshes.push(baseMesh);
 
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: "#d4af37",
+      roughness: 0.25,
+      metalness: 0.85,
+    });
+    const ringMesh = new THREE.Mesh(spotRingGeo, ringMat);
+    ringMesh.rotation.x = Math.PI / 2;
+    ringMesh.position.y = 0.022;
+    spotGroup.add(ringMesh);
+
+    const innerMat = new THREE.MeshStandardMaterial({
+      color: COLORS[color],
+      roughness: 0.35,
+      metalness: 0.3,
+      emissive: new THREE.Color(COLORS[color]).multiplyScalar(0.15),
+    });
+    const innerMesh = new THREE.Mesh(spotInnerGeo, innerMat);
+    innerMesh.position.y = 0.024;
+    innerMesh.receiveShadow = true;
+    spotGroup.add(innerMesh);
+
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: COLORS[color],
+      transparent: true,
+      opacity: color === "red" ? 0.6 : 0.15,
+      side: THREE.DoubleSide,
+    });
+    const haloMesh = new THREE.Mesh(spotHaloGeo, haloMat);
+    haloMesh.rotation.x = -Math.PI / 2;
+    haloMesh.position.y = 0.03;
+    spotGroup.add(haloMesh);
+
+    landingSpotsGroup.add(spotGroup);
+    spotMeshes[color] = { spotGroup, innerMat, haloMat, haloMesh };
+  }
+
+  // Backwards compatibility reference for scene
+  const turnDisc = landingSpotsGroup;
+
+  let flightTimeline = null;
+  let rollTimeline = null;
   let idleTween = null;
+  let isRolling = false;
+  let rollResolver = null;
+  let lastRollValue = 1;
+
+  function stopAllAnimations(force = false) {
+    stopIdle();
+    if (flightTimeline) {
+      flightTimeline.kill();
+      flightTimeline = null;
+    }
+    if (rollTimeline && (force || !isRolling)) {
+      rollTimeline.kill();
+      rollTimeline = null;
+      isRolling = false;
+      if (rollResolver) {
+        const resolve = rollResolver;
+        rollResolver = null;
+        resolve(lastRollValue);
+      }
+    }
+    if (force || !isRolling) {
+      gsap.killTweensOf(diceGroup.position);
+      gsap.killTweensOf(diceGroup.rotation);
+    }
+  }
 
   function startIdle() {
     stopIdle();
-    diceGroup.position.y = 1.2;
+    if (isRolling) return;
+    const currentSpot = DICE_SPOTS[currentColor] || DICE_SPOTS.red;
+    // Gentle hovering breath
+    idleTween = gsap.to(diceGroup.position, {
+      y: currentSpot.y + 0.08,
+      duration: 1.4,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+    });
   }
 
   function stopIdle() {
@@ -210,13 +306,121 @@ export function createDice() {
 
   startIdle();
 
-  /** Rolls, and resolves with the value once it has settled. */
+  /** Smoothly glides the dice in an unbroken parabolic flight to the active player's spot */
+  function setTurnColor(color, animated = true) {
+    if (!DICE_SPOTS[color]) return;
+    currentColor = color;
+
+    // Update glowing active landing spot
+    Object.entries(spotMeshes).forEach(([col, { haloMat, haloMesh, innerMat }]) => {
+      const isActive = col === color;
+      gsap.killTweensOf(haloMesh.scale);
+      gsap.killTweensOf(haloMat);
+
+      if (isActive) {
+        haloMat.opacity = 0.65;
+        innerMat.emissive.set(COLORS[col]).multiplyScalar(0.35);
+        gsap.to(haloMesh.scale, {
+          x: 1.15,
+          y: 1.15,
+          z: 1.15,
+          duration: 0.7,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        });
+      } else {
+        haloMat.opacity = 0.12;
+        innerMat.emissive.set(COLORS[col]).multiplyScalar(0.08);
+        haloMesh.scale.set(1, 1, 1);
+      }
+    });
+
+    // If currently rolling, let the roll finish safely without interrupting its promise
+    if (isRolling) return;
+
+    const targetSpot = DICE_SPOTS[color];
+    const startX = diceGroup.position.x;
+    const startY = diceGroup.position.y;
+    const startZ = diceGroup.position.z;
+    const dist = Math.hypot(targetSpot.x - startX, targetSpot.z - startZ);
+
+    if (!animated || dist < 0.08) {
+      diceGroup.position.set(targetSpot.x, targetSpot.y, targetSpot.z);
+      startIdle();
+      return;
+    }
+
+    // Stop current animations cleanly
+    stopAllAnimations(false);
+
+    const flightDuration = Math.min(0.72, Math.max(0.42, dist * 0.085));
+    const apexY = Math.max(startY, targetSpot.y) + Math.min(2.4, 0.9 + dist * 0.16);
+
+    flightTimeline = gsap.timeline({
+      onComplete: () => {
+        flightTimeline = null;
+        diceGroup.position.set(targetSpot.x, targetSpot.y, targetSpot.z);
+        startIdle();
+      },
+    });
+
+    // Horizontal smooth travel
+    flightTimeline.to(
+      diceGroup.position,
+      {
+        x: targetSpot.x,
+        z: targetSpot.z,
+        duration: flightDuration,
+        ease: "power2.inOut",
+      },
+      0
+    );
+
+    // Parabolic vertical lift & smooth touchdown
+    flightTimeline.to(
+      diceGroup.position,
+      {
+        y: apexY,
+        duration: flightDuration * 0.44,
+        ease: "power2.out",
+      },
+      0
+    );
+    flightTimeline.to(
+      diceGroup.position,
+      {
+        y: targetSpot.y,
+        duration: flightDuration * 0.56,
+        ease: "power2.inOut",
+      },
+      flightDuration * 0.44
+    );
+
+    // Natural in-flight spin
+    flightTimeline.to(
+      diceGroup.rotation,
+      {
+        y: diceGroup.rotation.y + Math.PI * 0.5,
+        duration: flightDuration,
+        ease: "power1.inOut",
+      },
+      0
+    );
+  }
+
+  /** Rolls the dice smoothly from its current spot without snapping or locking */
   function roll(value) {
+    lastRollValue = value;
+    isRolling = true;
+
     stopIdle();
+    if (flightTimeline) {
+      flightTimeline.kill();
+      flightTimeline = null;
+    }
 
-    gsap.killTweensOf(diceGroup.rotation);
-    gsap.killTweensOf(diceGroup.position);
-
+    const targetSpot = DICE_SPOTS[currentColor] || DICE_SPOTS.red;
     const target = FACE_UP_ROTATION[value];
 
     // Calculate final multi-turn rotations upfront for seamless deceleration
@@ -225,56 +429,93 @@ export function createDice() {
     const finalZ = forwardAngle(diceGroup.rotation.z + Math.PI * randomInt(3, 5), target.z);
 
     return new Promise((resolve) => {
-      const timeline = gsap.timeline({
+      rollResolver = resolve;
+
+      if (rollTimeline) {
+        rollTimeline.kill();
+      }
+
+      rollTimeline = gsap.timeline({
         onComplete: () => {
+          rollTimeline = null;
+          isRolling = false;
+          diceGroup.position.set(targetSpot.x, targetSpot.y, targetSpot.z);
           startIdle();
-          resolve(value);
+          if (rollResolver) {
+            const res = rollResolver;
+            rollResolver = null;
+            res(value);
+          }
         },
       });
 
+      // Smoothly ensure x/z alignment with active spot during roll (never snap)
+      rollTimeline.to(
+        diceGroup.position,
+        {
+          x: targetSpot.x,
+          z: targetSpot.z,
+          duration: 0.35,
+          ease: "power2.out",
+        },
+        0
+      );
+
       // Upward throw
-      timeline.to(diceGroup.position, {
-        y: 3.4,
-        duration: 0.32,
-        ease: "power2.out",
-      });
+      rollTimeline.to(
+        diceGroup.position,
+        {
+          y: targetSpot.y + 2.3,
+          duration: 0.34,
+          ease: "power2.out",
+        },
+        0
+      );
 
       // Gravity fall
-      timeline.to(diceGroup.position, {
-        y: 1.2,
-        duration: 0.42,
-        ease: "power2.in",
-      });
+      rollTimeline.to(
+        diceGroup.position,
+        {
+          y: targetSpot.y,
+          duration: 0.42,
+          ease: "power2.in",
+        },
+        0.34
+      );
 
-      // Micro bounce impact on board
-      timeline.to(diceGroup.position, {
-        y: 1.38,
-        duration: 0.1,
-        ease: "power1.out",
-      });
-      timeline.to(diceGroup.position, {
-        y: 1.2,
-        duration: 0.12,
-        ease: "bounce.out",
-      });
+      // Micro bounce impact on saucer
+      rollTimeline.to(
+        diceGroup.position,
+        {
+          y: targetSpot.y + 0.2,
+          duration: 0.1,
+          ease: "power1.out",
+        },
+        0.76
+      );
+      rollTimeline.to(
+        diceGroup.position,
+        {
+          y: targetSpot.y,
+          duration: 0.14,
+          ease: "bounce.out",
+        },
+        0.86
+      );
 
-      // Single continuous rotation timeline covering the entire throw duration (0.94s)
-      timeline.to(
+      // Multi-axis tumble rotation
+      rollTimeline.to(
         diceGroup.rotation,
         {
           x: finalX,
           y: finalY,
           z: finalZ,
-          duration: 0.94,
+          duration: 0.96,
           ease: "power3.out",
         },
-        0,
+        0
       );
     });
-  }
-
-  function setTurnColor(color) {
-    discMaterial.color.set(COLORS[color]);
   }
 
   function setHovered(hovered) {
@@ -299,14 +540,23 @@ export function createDice() {
     pipMaterial.dispose();
     pipRingGeometry.dispose();
     pipRingMaterial.dispose();
-    discGeometry.dispose();
-    discMaterial.dispose();
+    spotBaseGeo.dispose();
+    spotRingGeo.dispose();
+    spotInnerGeo.dispose();
+    spotHaloGeo.dispose();
+
+    Object.values(spotMeshes).forEach(({ innerMat, haloMat }) => {
+      innerMat.dispose();
+      haloMat.dispose();
+    });
   }
 
   return {
     diceGroup,
     diceMesh,
     turnDisc,
+    landingSpotsGroup,
+    clickableMeshes,
     roll,
     setTurnColor,
     setHovered,

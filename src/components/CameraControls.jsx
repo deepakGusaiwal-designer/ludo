@@ -46,7 +46,7 @@ export function CameraControls({ sceneRef }) {
         onClick={() => setIsOpen(!isOpen)}
         title={`Camera View: ${activeLabel}`}
       >
-        <Camera01Icon className="hud-icon" size={16} />
+        <Camera01Icon className="hud-icon" size={18} />
         <span className="hud-btn-text">{activeAngle.toUpperCase()}</span>
         <ArrowDown01Icon
           size={14}

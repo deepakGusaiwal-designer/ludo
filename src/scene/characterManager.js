@@ -5,42 +5,88 @@ import { preloadAnimations } from "./animationManager.js";
 
 const STORAGE_KEY = "ludo_selected_character";
 
+const BASE_URL = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "");
+
 export const CHARACTERS = [
   {
     id: "woman-cutie",
     name: "Cutie Girl",
     desc: "Charming and stylish character with playful aesthetic (Default)",
-    modelPath: "/modal/woman-cutie.glb",
+    modelPaths: [
+      `${BASE_URL}/modal/woman-cutie.glb`,
+      `/modal/woman-cutie.glb`,
+      `./modal/woman-cutie.glb`,
+    ],
     previewEmoji: "🌸",
     badge: "Default",
-    targetHeight: 0.58,
+    targetHeight: 0.64,
+  },
+  {
+    id: "warrior-pawn",
+    name: "Warrior Pawn",
+    desc: "Armored mythical warrior token forged for conquest",
+    modelPaths: [
+      `${BASE_URL}/modal/pawn_model/scene.gltf`,
+      `${BASE_URL}/modal/pawn__model/scene.gltf`,
+      `/modal/pawn_model/scene.gltf`,
+      `/modal/pawn__model/scene.gltf`,
+      `./modal/pawn_model/scene.gltf`,
+    ],
+    previewEmoji: "⚔️",
+    badge: "Warrior",
+    targetHeight: 0.62,
   },
   {
     id: "woman-officer",
     name: "Officer Lady",
     desc: "Disciplined uniform hero ready for strategic battle",
-    modelPath: "/modal/woman-officer.glb",
+    modelPaths: [
+      `${BASE_URL}/modal/woman-officer.glb`,
+      `/modal/woman-officer.glb`,
+      `./modal/woman-officer.glb`,
+    ],
     previewEmoji: "👮‍♀️",
     badge: "New",
-    targetHeight: 0.58,
+    targetHeight: 0.64,
+  },
+  {
+    id: "rabbit",
+    name: "Little Rabbit",
+    desc: "Adorable bunny token with bouncy spirit and charming energy",
+    modelPaths: [
+      `${BASE_URL}/modal/rabbit.glb`,
+      `${BASE_URL}/modal/Little-Rabbit.glb`,
+      `${BASE_URL}/modal/Little+Rabbit.glb`,
+      `/modal/rabbit.glb`,
+      `/modal/Little-Rabbit.glb`,
+      `/modal/Little+Rabbit.glb`,
+      `./modal/rabbit.glb`,
+    ],
+    previewEmoji: "🐰",
+    badge: "Cute",
+    targetHeight: 0.64,
   },
   {
     id: "peon",
     name: "Royal Peon",
     desc: "Crafted 3D luxury chess-style peon pawn piece",
-    modelPath: "/modal/peon.glb",
+    modelPaths: [
+      `${BASE_URL}/modal/peon.glb`,
+      `/modal/peon.glb`,
+      `./modal/peon.glb`,
+    ],
     previewEmoji: "♟️",
     badge: "Pawn",
-    targetHeight: 0.52,
+    targetHeight: 0.57,
   },
   {
     id: "classic",
     name: "Classic Pawn",
     desc: "Traditional wooden & crystal geometric Ludo token piece",
-    modelPath: null,
+    modelPaths: [],
     previewEmoji: "🎲",
     badge: "Retro",
-    targetHeight: 0.55,
+    targetHeight: 0.60,
   },
 ];
 
@@ -67,20 +113,38 @@ const modelCache = new Map();
 
 /**
  * Loads, normalizes dimensions, and caches a character GLTF model template.
+ * Tries candidate URLs in order until one loads successfully.
  */
 export async function loadCharacterModel(charId) {
   const char = CHARACTERS.find((c) => c.id === charId) || CHARACTERS[0];
-  if (!char.modelPath) return null;
+  if (!char.modelPaths || char.modelPaths.length === 0) return null;
 
   if (modelCache.has(charId)) {
     return modelCache.get(charId);
   }
 
-  try {
-    const gltf = await new Promise((resolve, reject) => {
-      gltfLoader.load(char.modelPath, resolve, undefined, reject);
-    });
+  let gltf = null;
+  let lastError = null;
 
+  for (const url of char.modelPaths) {
+    try {
+      gltf = await new Promise((resolve, reject) => {
+        gltfLoader.load(url, resolve, undefined, reject);
+      });
+      if (gltf && gltf.scene) {
+        break; // Successfully loaded
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!gltf || !gltf.scene) {
+    console.warn(`[loadCharacterModel] Could not load model for [${charId}]. Falling back gracefully.`, lastError);
+    return null;
+  }
+
+  try {
     const root = gltf.scene;
 
     root.traverse((child) => {
@@ -115,7 +179,7 @@ export async function loadCharacterModel(charId) {
     modelCache.set(charId, container);
     return container;
   } catch (error) {
-    console.error(`Failed to load character model [${charId}]:`, error);
+    console.error(`Failed to process character model [${charId}]:`, error);
     return null;
   }
 }

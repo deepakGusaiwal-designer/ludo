@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import gsap from "gsap";
 
 import {
   BOARD_CELLS,
@@ -15,6 +16,57 @@ import {
 import { boardMaterials, colorMaterial, getMaterial } from "./materials.js";
 
 const HOME_SIZE = 6;
+
+export const BOARD_THEMES = {
+  clear: {
+    baseColor: "#6b4226", // Warm mahogany woodland wood plinth
+    topColor: "#f7f0df",  // Maple cream board surface
+    roughness: 0.75,
+    metalness: 0.05,
+    topRoughness: 0.7,
+    topMetalness: 0.05,
+  },
+  ice: {
+    baseColor: "#183248", // Glacier frozen ice-stone plinth
+    topColor: "#e6f2fc",  // Arctic frost slab
+    roughness: 0.32,
+    metalness: 0.25,
+    topRoughness: 0.35,
+    topMetalness: 0.15,
+  },
+  heavy_rain: {
+    baseColor: "#112538", // Weathered oceanic driftwood plinth
+    topColor: "#d9e8f5",  // Sea-spray marine slate
+    roughness: 0.6,
+    metalness: 0.1,
+    topRoughness: 0.55,
+    topMetalness: 0.1,
+  },
+  desert: {
+    baseColor: "#804323", // Terracotta canyon sandstone plinth
+    topColor: "#faebd0",  // Fine golden dune sand
+    roughness: 0.85,
+    metalness: 0.05,
+    topRoughness: 0.8,
+    topMetalness: 0.05,
+  },
+  heaven: {
+    baseColor: "#3e5168", // Alabaster celestial quartz plinth
+    topColor: "#ffffff",  // Radiant cloud pearl
+    roughness: 0.22,
+    metalness: 0.45,
+    topRoughness: 0.25,
+    topMetalness: 0.3,
+  },
+  hell: {
+    baseColor: "#1e0b0b", // Obsidian charred volcanic rock plinth
+    topColor: "#2d1b1b",  // Smoky ash basalt
+    roughness: 0.82,
+    metalness: 0.15,
+    topRoughness: 0.78,
+    topMetalness: 0.15,
+  },
+};
 
 function isYardCell(r, c) {
   return (
@@ -43,10 +95,22 @@ export function createBoard() {
     return geometry;
   };
 
-  /* Base + Top Slab */
+  /* Base + Top Slab with dedicated theme materials */
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(BOARD_THEMES.clear.baseColor),
+    roughness: BOARD_THEMES.clear.roughness,
+    metalness: BOARD_THEMES.clear.metalness,
+  });
+
+  const topMaterial = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(BOARD_THEMES.clear.topColor),
+    roughness: BOARD_THEMES.clear.topRoughness,
+    metalness: BOARD_THEMES.clear.topMetalness,
+  });
+
   const base = new THREE.Mesh(
     track(new THREE.BoxGeometry(BOARD_SIZE + 0.65, 0.42, BOARD_SIZE + 0.65)),
-    boardMaterials.base,
+    baseMaterial,
   );
   base.position.y = 0.21;
   base.castShadow = true;
@@ -55,7 +119,7 @@ export function createBoard() {
 
   const top = new THREE.Mesh(
     track(new THREE.BoxGeometry(BOARD_SIZE, 0.14, BOARD_SIZE)),
-    boardMaterials.board,
+    topMaterial,
   );
   top.position.y = 0.49;
   top.receiveShadow = true;
@@ -222,10 +286,57 @@ export function createBoard() {
   /* Center Finish Area (Seamless 3D Extruded Triangles with Gold Trim) */
   boardGroup.add(createCenter(track));
 
+  function setTheme(themeId, animated = true) {
+    const theme = BOARD_THEMES[themeId] || BOARD_THEMES.clear;
+    const targetBaseColor = new THREE.Color(theme.baseColor);
+    const targetTopColor = new THREE.Color(theme.topColor);
+
+    if (!animated) {
+      baseMaterial.color.copy(targetBaseColor);
+      baseMaterial.roughness = theme.roughness;
+      baseMaterial.metalness = theme.metalness;
+      topMaterial.color.copy(targetTopColor);
+      topMaterial.roughness = theme.topRoughness;
+      topMaterial.metalness = theme.topMetalness;
+      return;
+    }
+
+    gsap.to(baseMaterial.color, {
+      r: targetBaseColor.r,
+      g: targetBaseColor.g,
+      b: targetBaseColor.b,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+    gsap.to(baseMaterial, {
+      roughness: theme.roughness,
+      metalness: theme.metalness,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+
+    gsap.to(topMaterial.color, {
+      r: targetTopColor.r,
+      g: targetTopColor.g,
+      b: targetTopColor.b,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+    gsap.to(topMaterial, {
+      roughness: theme.topRoughness,
+      metalness: theme.topMetalness,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+  }
+
   return {
     boardGroup,
+    setTheme,
     dispose() {
       owned.forEach((geometry) => geometry.dispose());
+      baseMaterial.dispose();
+      topMaterial.dispose();
     },
   };
 }

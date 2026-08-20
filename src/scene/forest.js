@@ -1,6 +1,80 @@
 import * as THREE from "three";
+import gsap from "gsap";
 
 import { getMaterial } from "./materials.js";
+import {
+  getCircleParticleTexture,
+  getRainStreakTexture,
+} from "./weatherManager.js";
+
+export const FOREST_THEMES = {
+  clear: {
+    ground: "#334535",
+    groundRoughness: 0.95,
+    groundBumpScale: 0.18,
+    groundMetalness: 0.05,
+    bark: "#7a6040",
+    rock: "#6a6d62",
+    foliage: ["#2c4932", "#34543a", "#3e6041", "#466746", "#2a412f"],
+    bush: ["#304d35", "#3b5b3d", "#456744", "#263f2d"],
+    grass: ["#506847", "#5c714e", "#405a3d", "#667855"],
+  },
+  desert: {
+    ground: "#c89456",
+    groundRoughness: 0.92,
+    groundBumpScale: 0.08,
+    groundMetalness: 0.02,
+    bark: "#8c6e4e",
+    rock: "#b88a58",
+    foliage: ["#9e8749", "#ab9556", "#8a773d", "#948043", "#a89052"],
+    bush: ["#a0874c", "#8f7940", "#b3995d", "#7d6935"],
+    grass: ["#c49d60", "#b58e50", "#d1ab6e", "#a88145"],
+  },
+  hell: {
+    ground: "#140505",
+    groundRoughness: 0.85,
+    groundBumpScale: 0.28,
+    groundMetalness: 0.1,
+    bark: "#260e0e",
+    rock: "#3a1414",
+    foliage: ["#3b0f0f", "#4d1414", "#5e1a1a", "#2e0b0b", "#481212"],
+    bush: ["#421111", "#541616", "#330d0d", "#491313"],
+    grass: ["#631616", "#4d1010", "#781c1c", "#3d0a0a"],
+  },
+  heaven: {
+    ground: "#a8c6e5",
+    groundRoughness: 0.45,
+    groundBumpScale: 0.05,
+    groundMetalness: 0.08,
+    bark: "#dcd0c2",
+    rock: "#c8dcf2",
+    foliage: ["#76c2be", "#8ae0db", "#a2ebd8", "#6fbab6", "#7ee5d0"],
+    bush: ["#82d4cf", "#99e8e2", "#6ec2bd", "#78dfd8"],
+    grass: ["#95e2d2", "#adf2e3", "#82d6c5", "#bdf7ec"],
+  },
+  ice: {
+    ground: "#8cd4f5",
+    groundRoughness: 0.12,
+    groundBumpScale: 0.08,
+    groundMetalness: 0.18,
+    bark: "#4a6878",
+    rock: "#a5d8f0",
+    foliage: ["#6ab8d9", "#7ecae8", "#5aa8c9", "#8ddcf7", "#73c2e3"],
+    bush: ["#6ebfe0", "#84d2f0", "#5cb0d4", "#77cceb"],
+    grass: ["#9ee2fa", "#b8edff", "#8cd8f5"],
+  },
+  heavy_rain: {
+    ground: "#0d6db8",
+    groundRoughness: 0.05,
+    groundBumpScale: 0.16,
+    groundMetalness: 0.3,
+    bark: "#32251a",
+    rock: "#1e527a",
+    foliage: ["#1c3324", "#223e2c", "#172b1e", "#274732", "#1e3726"],
+    bush: ["#1f3827", "#172b1e", "#25422e", "#1b3022"],
+    grass: ["#24422e", "#2b4e37", "#1d3525"],
+  },
+};
 
 const CONFIG = {
   forestRadius: 32,
@@ -199,6 +273,100 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     color: "#6a6d62",
   });
 
+  // Dynamic theme-adaptive materials
+  const foliageMaterials = PALETTE.foliage.map(
+    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.88 })
+  );
+  const bushMaterials = PALETTE.bush.map(
+    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.88 })
+  );
+  const grassMaterials = PALETTE.grass.map(
+    (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.92 })
+  );
+
+  // Realm specific materials
+  const desertRockMat = new THREE.MeshStandardMaterial({
+    map: rockTexture,
+    roughness: 0.92,
+    color: "#c49258",
+  });
+  const desertPillarMat = new THREE.MeshStandardMaterial({
+    roughness: 0.9,
+    color: "#b8854c",
+  });
+
+  const volcanicSpireMat = new THREE.MeshStandardMaterial({
+    roughness: 0.82,
+    color: "#1c0909",
+  });
+  const magmaRockMat = new THREE.MeshStandardMaterial({
+    roughness: 0.65,
+    color: "#2b0d0d",
+    emissive: "#ff3700",
+    emissiveIntensity: 1.2,
+  });
+
+  const icebergMat = new THREE.MeshStandardMaterial({
+    color: "#d2f0ff",
+    roughness: 0.12,
+    metalness: 0.15,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const iceSpireMat = new THREE.MeshStandardMaterial({
+    color: "#8ed4f5",
+    roughness: 0.15,
+    metalness: 0.2,
+    transparent: true,
+    opacity: 0.9,
+  });
+
+  // Ocean realm materials
+  const shipHullMat = new THREE.MeshStandardMaterial({
+    color: "#2e1c14",
+    roughness: 0.75,
+  });
+  const shipSailMat = new THREE.MeshStandardMaterial({
+    color: "#f8fafc",
+    roughness: 0.85,
+    side: THREE.DoubleSide,
+  });
+  const boatHullMat = new THREE.MeshStandardMaterial({
+    color: "#0284c7",
+    roughness: 0.5,
+  });
+  const boatWoodMat = new THREE.MeshStandardMaterial({
+    color: "#b45309",
+    roughness: 0.75,
+  });
+  const lighthouseWhiteMat = new THREE.MeshStandardMaterial({
+    color: "#ffffff",
+    roughness: 0.6,
+  });
+  const lighthouseRedMat = new THREE.MeshStandardMaterial({
+    color: "#dc2626",
+    roughness: 0.6,
+  });
+  const buildingStoneMat = new THREE.MeshStandardMaterial({
+    color: "#475569",
+    roughness: 0.85,
+  });
+  const buildingWindowMat = new THREE.MeshStandardMaterial({
+    color: "#ffedd5",
+    emissive: "#f59e0b",
+    emissiveIntensity: 2.2,
+    roughness: 0.3,
+  });
+  const buoyRedMat = new THREE.MeshStandardMaterial({
+    color: "#ef4444",
+    roughness: 0.4,
+  });
+  const buoyLightMat = new THREE.MeshStandardMaterial({
+    color: "#fef08a",
+    emissive: "#eab308",
+    emissiveIntensity: 2.8,
+  });
+
   const geometries = {
     treeTrunk: new THREE.CylinderGeometry(0.22, 0.34, 2.8, 7),
     foliageLarge: new THREE.IcosahedronGeometry(1.55, 1),
@@ -209,6 +377,12 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     grass: new THREE.ConeGeometry(0.045, 0.55, 4),
     log: new THREE.CylinderGeometry(0.22, 0.27, 2.5, 7),
     logEnd: new THREE.CircleGeometry(0.22, 8),
+    desertRock: new THREE.DodecahedronGeometry(1.2, 1),
+    desertPillar: new THREE.CylinderGeometry(0.6, 0.9, 4.5, 6),
+    volcanicSpire: new THREE.ConeGeometry(0.8, 5.2, 5),
+    magmaRock: new THREE.DodecahedronGeometry(1.4, 1),
+    iceberg: new THREE.ConeGeometry(1.9, 6.2, 6),
+    iceSpire: new THREE.ConeGeometry(0.7, 4.5, 5),
     // Animal geometries
     deerBody: new THREE.CylinderGeometry(0.18, 0.2, 0.9, 8),
     deerHead: new THREE.SphereGeometry(0.14, 8, 6),
@@ -268,7 +442,7 @@ export function createForest({ isMobile, qualityTier = "high" }) {
 
     tree.add(trunk);
 
-    const foliageMaterial = getMaterial(pick(PALETTE.foliage));
+    const foliageMaterial = pick(foliageMaterials);
 
     const bottom = new THREE.Mesh(geometries.foliageLarge, foliageMaterial);
     bottom.position.y = 2.65 * height;
@@ -303,7 +477,7 @@ export function createForest({ isMobile, qualityTier = "high" }) {
   function createBush() {
     const bush = new THREE.Group();
 
-    const material = getMaterial(pick(PALETTE.bush));
+    const material = pick(bushMaterials);
 
     for (let i = 0, count = randomInt(3, 6); i < count; i++) {
       const mesh = new THREE.Mesh(geometries.bush, material);
@@ -348,7 +522,7 @@ export function createForest({ isMobile, qualityTier = "high" }) {
   function createGrass() {
     const group = new THREE.Group();
 
-    const material = getMaterial(pick(PALETTE.grass));
+    const material = pick(grassMaterials);
 
     for (let i = 0, count = randomInt(6, 11); i < count; i++) {
       const blade = new THREE.Mesh(geometries.grass, material);
@@ -652,7 +826,7 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     for (let i = 0; i < puffCount; i++) {
       const puff = new THREE.Mesh(cloudGeo, cloudMaterial);
       const scale = random(0.85, 1.65);
-      puff.scale.set(scale * 1.35, scale * random(0.65, 0.95), scale * 1.1);
+puff.scale.set(scale * 1.35, scale * random(0.65, 0.95), scale * 1.1);
       puff.position.set(
         (i - puffCount / 2) * 1.5 + random(-0.4, 0.4),
         random(-0.25, 0.35),
@@ -667,151 +841,6 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     };
 
     return cloud;
-  }
-
-  /* —— Place everything —— */
-
-  // Three manual presets only: "ultra" is denser than the scene's
-  // tuned defaults, "high" is those defaults, "light" is a sparse
-  // pass for weaker hardware. No auto-detection here — whichever
-  // tier the player picked in Graphics settings applies as-is.
-  const activeTier = qualityTier === "ultra" ? "ultra" : qualityTier === "light" ? "light" : "high";
-
-  let treeCount = CONFIG.treeCount;
-  let grassCount = CONFIG.grassCount;
-  let nearBoardCount = CONFIG.nearBoardGrassCount;
-  let cloudCount = 0;
-  let butterflyCount = CONFIG.butterflyCount;
-  let mushroomCount = CONFIG.mushroomCount;
-  let flowerCount = CONFIG.flowerCount;
-  let logCount = CONFIG.logCount;
-
-  if (activeTier === "ultra") {
-    treeCount = 58;
-    grassCount = 380;
-    nearBoardCount = 190;
-    cloudCount = 0;
-    butterflyCount = 16;
-    mushroomCount = 20;
-    flowerCount = 26;
-    logCount = 10;
-  } else if (activeTier === "light") {
-    treeCount = 8;
-    grassCount = 15;
-    nearBoardCount = 5;
-    cloudCount = 0;
-    butterflyCount = 0;
-    mushroomCount = 2;
-    flowerCount = 3;
-    logCount = 2;
-  }
-
-  for (let i = 0; i < treeCount; i++) {
-    const tree = createTree();
-    const { x, z } = forestPosition();
-    tree.position.set(x, 0, z);
-    forest.add(tree);
-  }
-
-  const bushCount = activeTier === "light" ? 6 : activeTier === "ultra" ? 62 : CONFIG.bushCount;
-  for (let i = 0; i < bushCount; i++) {
-    const bush = createBush();
-    const { x, z } = forestPosition();
-    bush.position.set(x, 0, z);
-    bush.scale.setScalar(random(0.8, 1.4));
-    forest.add(bush);
-  }
-
-  const rockCount = activeTier === "light" ? 5 : activeTier === "ultra" ? 52 : CONFIG.rockCount;
-  for (let i = 0; i < rockCount; i++) {
-    const rock = createRock();
-    const { x, z } = forestPosition();
-    rock.position.x = x;
-    rock.position.z = z;
-    forest.add(rock);
-  }
-
-  for (let i = 0; i < grassCount; i++) {
-    const grass = createGrass();
-    const { x, z } = forestPosition();
-    grass.position.set(x, 0, z);
-    grass.scale.setScalar(random(0.7, 1.3));
-    forest.add(grass);
-  }
-
-  // Dense Grass Ringing Directly Around the Board Edges
-  for (let i = 0; i < nearBoardCount; i++) {
-    const grass = createGrass();
-    const { x, z } = nearBoardPosition();
-    grass.position.set(x, 0, z);
-    grass.scale.setScalar(random(0.8, 1.45));
-    forest.add(grass);
-  }
-
-  for (let i = 0; i < logCount; i++) {
-    const log = createLog();
-    const { x, z } = forestPosition();
-    log.position.set(x, 0.25, z);
-    log.rotation.y = random(0, Math.PI * 2);
-    log.scale.setScalar(random(0.7, 1.1));
-    forest.add(log);
-  }
-
-  // Deer
-  const deerCount = activeTier === "light" ? 0 : activeTier === "ultra" ? 6 : CONFIG.deerCount;
-  for (let i = 0; i < deerCount; i++) {
-    const deer = createDeer();
-    const { x, z } = forestPosition();
-    deer.position.set(x, 0, z);
-    deer.rotation.y = random(0, Math.PI * 2);
-    forest.add(deer);
-  }
-
-  // Rabbits
-  const rabbitCount = activeTier === "light" ? 0 : activeTier === "ultra" ? 9 : CONFIG.rabbitCount;
-  for (let i = 0; i < rabbitCount; i++) {
-    const rabbit = createRabbit();
-    const { x, z } = forestPosition();
-    rabbit.position.set(x, 0, z);
-    rabbit.rotation.y = random(0, Math.PI * 2);
-    forest.add(rabbit);
-  }
-
-  // Butterflies
-  const butterflies = [];
-  for (let i = 0; i < butterflyCount; i++) {
-    const bf = createButterfly();
-    const { x, z } = forestPosition();
-    bf.position.set(x, random(1.5, 4), z);
-    bf.userData.originX = x;
-    bf.userData.originZ = z;
-    butterflies.push(bf);
-    forest.add(bf);
-  }
-
-  // Mushrooms
-  for (let i = 0; i < mushroomCount; i++) {
-    const mushroom = createMushroom();
-    const { x, z } = forestPosition();
-    mushroom.position.set(x, 0, z);
-    mushroom.rotation.y = random(0, Math.PI * 2);
-    forest.add(mushroom);
-  }
-
-  // Flowers
-  for (let i = 0; i < flowerCount; i++) {
-    const flower = createFlower();
-    const { x, z } = forestPosition();
-    flower.position.set(x, 0, z);
-    flower.rotation.y = random(0, Math.PI * 2);
-    forest.add(flower);
-  }
-
-  // 3D Sky Clouds
-  for (let i = 0; i < cloudCount; i++) {
-    const cloud = createCloud();
-    cloud.position.set(random(-35, 35), random(16, 26), random(-35, 35));
-    forest.add(cloud);
   }
 
   /* --- Bonfires & People (Campers) --- */
@@ -900,7 +929,7 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     return group;
   }
 
-  function createPerson({ shirtColor, skinColor, isSitting = false }) {
+  function createPerson({ shirtColor, skinColor, isSitting = false } = {}) {
     const person = new THREE.Group();
 
     const shirtMat = getMaterial(shirtColor || pick(shirtColors));
@@ -1030,12 +1059,613 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     return camp;
   }
 
-  // Place 2 campsites in the forest clearing
+  /* --- Ocean Realm: Ships, Boats, Lighthouses & Coastal Buildings --- */
+
+  function createSailingShip() {
+    const ship = new THREE.Group();
+
+    // Hull
+    const hullGeo = new THREE.BoxGeometry(1.5, 0.85, 4.2);
+    const hull = new THREE.Mesh(hullGeo, shipHullMat);
+    hull.position.y = 0.35;
+    hull.castShadow = true;
+    ship.add(hull);
+
+    // Deck Cabin
+    const cabinGeo = new THREE.BoxGeometry(1.15, 0.65, 1.2);
+    const cabin = new THREE.Mesh(cabinGeo, shipHullMat);
+    cabin.position.set(0, 0.88, -0.9);
+    cabin.castShadow = true;
+    ship.add(cabin);
+
+    // Cabin Windows
+    const windowGeo = new THREE.PlaneGeometry(0.22, 0.22);
+    const win1 = new THREE.Mesh(windowGeo, buildingWindowMat);
+    win1.position.set(0.59, 0.88, -0.9);
+    win1.rotation.y = Math.PI / 2;
+    ship.add(win1);
+
+    // Masts
+    const mastGeo = new THREE.CylinderGeometry(0.06, 0.08, 3.8, 6);
+    const mast1 = new THREE.Mesh(mastGeo, shipHullMat);
+    mast1.position.set(0, 2.3, 0.6);
+    ship.add(mast1);
+
+    const mast2 = new THREE.Mesh(mastGeo, shipHullMat);
+    mast2.position.set(0, 2.0, -0.5);
+    mast2.scale.set(0.9, 0.85, 0.9);
+    ship.add(mast2);
+
+    // Billowing Cloth Sails
+    const sailGeo = new THREE.PlaneGeometry(1.9, 1.6, 3, 2);
+    const sailPos = sailGeo.attributes.position;
+    for (let i = 0; i < sailPos.count; i++) {
+      const z = Math.sin(sailPos.getY(i) * 1.8) * 0.25;
+      sailPos.setZ(i, z);
+    }
+    sailGeo.computeVertexNormals();
+
+    const sail1 = new THREE.Mesh(sailGeo, shipSailMat);
+    sail1.position.set(0, 2.4, 0.6);
+    sail1.rotation.y = Math.PI / 2 + 0.15;
+    ship.add(sail1);
+
+    const sail2 = new THREE.Mesh(sailGeo, shipSailMat);
+    sail2.position.set(0, 2.1, -0.5);
+    sail2.scale.set(0.85, 0.8, 0.85);
+    sail2.rotation.y = Math.PI / 2 + 0.15;
+    ship.add(sail2);
+
+    // Flag
+    const flagMat = new THREE.MeshStandardMaterial({
+      color: "#ef4444",
+      side: THREE.DoubleSide,
+    });
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25), flagMat);
+    flag.position.set(0, 4.1, 0.6);
+    flag.rotation.y = Math.PI / 2;
+    ship.add(flag);
+
+    ship.userData = {
+      isShip: true,
+      baseY: 0,
+      bobSpeed: random(1.2, 1.8),
+      bobAmount: random(0.12, 0.22),
+      rollSpeed: random(0.9, 1.5),
+      rollAmount: random(0.05, 0.09),
+      pitchAmount: random(0.04, 0.07),
+      phase: random(0, Math.PI * 2),
+    };
+
+    return ship;
+  }
+
+  function createSmallBoat({ isMotor = false } = {}) {
+    const boat = new THREE.Group();
+
+    // Hull
+    const hullGeo = new THREE.BoxGeometry(0.9, 0.45, 2.2);
+    const hull = new THREE.Mesh(hullGeo, isMotor ? boatHullMat : boatWoodMat);
+    hull.position.y = 0.18;
+    hull.castShadow = true;
+    boat.add(hull);
+
+    // Benches / Cockpit
+    const seatGeo = new THREE.BoxGeometry(0.7, 0.1, 0.35);
+    const seat1 = new THREE.Mesh(seatGeo, boatWoodMat);
+    seat1.position.set(0, 0.3, 0);
+    boat.add(seat1);
+
+    if (isMotor) {
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: "#a5f3fc",
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.7,
+      });
+      const shield = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.35, 0.08),
+        glassMat
+      );
+      shield.position.set(0, 0.48, 0.4);
+      boat.add(shield);
+
+      const motor = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.4, 0.3),
+        shipHullMat
+      );
+      motor.position.set(0, 0.3, -1.05);
+      boat.add(motor);
+    } else {
+      const oarGeo = new THREE.CylinderGeometry(0.02, 0.03, 1.5, 4);
+      const oar1 = new THREE.Mesh(oarGeo, boatWoodMat);
+      oar1.position.set(0.55, 0.35, 0);
+      oar1.rotation.z = -Math.PI / 3;
+      boat.add(oar1);
+
+      const oar2 = new THREE.Mesh(oarGeo, boatWoodMat);
+      oar2.position.set(-0.55, 0.35, 0);
+      oar2.rotation.z = Math.PI / 3;
+      boat.add(oar2);
+    }
+
+    boat.userData = {
+      isShip: true,
+      baseY: 0,
+      bobSpeed: random(1.8, 2.8),
+      bobAmount: random(0.08, 0.16),
+      rollSpeed: random(1.4, 2.2),
+      rollAmount: random(0.07, 0.12),
+      pitchAmount: random(0.05, 0.09),
+      phase: random(0, Math.PI * 2),
+    };
+
+    return boat;
+  }
+
+  function createLighthouse() {
+    const lighthouse = new THREE.Group();
+
+    // Stone base foundation
+    const baseGeo = new THREE.CylinderGeometry(1.7, 2.0, 1.2, 10);
+    const base = new THREE.Mesh(baseGeo, buildingStoneMat);
+    base.position.y = 0.6;
+    base.castShadow = true;
+    lighthouse.add(base);
+
+    // Striped Tower Sections (Alternating Red and White)
+    const sectionHeight = 1.3;
+    const sectionCount = 4;
+    for (let i = 0; i < sectionCount; i++) {
+      const rTop = 1.4 - i * 0.15;
+      const rBot = 1.55 - i * 0.15;
+      const secGeo = new THREE.CylinderGeometry(rTop, rBot, sectionHeight, 10);
+      const secMat = i % 2 === 0 ? lighthouseWhiteMat : lighthouseRedMat;
+      const sec = new THREE.Mesh(secGeo, secMat);
+      sec.position.y = 1.2 + (i + 0.5) * sectionHeight;
+      sec.castShadow = true;
+      lighthouse.add(sec);
+    }
+
+    const towerTopY = 1.2 + sectionCount * sectionHeight;
+
+    // Gallery Balcony
+    const galleryGeo = new THREE.CylinderGeometry(1.25, 1.25, 0.25, 10);
+    const gallery = new THREE.Mesh(galleryGeo, lighthouseRedMat);
+    gallery.position.y = towerTopY + 0.12;
+    lighthouse.add(gallery);
+
+    // Glass Lantern Room
+    const lanternGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.95, 8);
+    const lanternMat = new THREE.MeshStandardMaterial({
+      color: "#ffedd5",
+      emissive: "#ffb703",
+      emissiveIntensity: 3.5,
+      roughness: 0.1,
+    });
+    const lantern = new THREE.Mesh(lanternGeo, lanternMat);
+    lantern.position.y = towerTopY + 0.72;
+    lighthouse.add(lantern);
+
+    // Conical Roof Cupola
+    const roofGeo = new THREE.ConeGeometry(1.05, 0.9, 10);
+    const roof = new THREE.Mesh(roofGeo, lighthouseRedMat);
+    roof.position.y = towerTopY + 1.65;
+    lighthouse.add(roof);
+
+    // Rotating Beacon Light Beam
+    const beacon = new THREE.Group();
+    beacon.position.y = towerTopY + 0.72;
+
+    const beamLight = new THREE.PointLight("#ffea79", 3.2, 26);
+    beacon.add(beamLight);
+
+    const beamConeMat = new THREE.MeshBasicMaterial({
+      color: "#ffee88",
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const beamGeo = new THREE.ConeGeometry(1.6, 12, 8, 1, true);
+    const beam = new THREE.Mesh(beamGeo, beamConeMat);
+    beam.position.set(0, 0, 6);
+    beam.rotation.x = Math.PI / 2;
+    beacon.add(beam);
+
+    lighthouse.add(beacon);
+
+    lighthouse.userData = {
+      isLighthouse: true,
+      beacon,
+    };
+
+    return lighthouse;
+  }
+
+  function createCoastalBuilding() {
+    const building = new THREE.Group();
+
+    // Wooden stilts supporting building above water
+    const stiltMat = shipHullMat;
+    const stiltGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.8, 6);
+    const stiltPositions = [
+      [-0.9, -0.9],
+      [0.9, -0.9],
+      [-0.9, 0.9],
+      [0.9, 0.9],
+      [0, -0.9],
+      [0, 0.9],
+    ];
+    stiltPositions.forEach(([sx, sz]) => {
+      const stilt = new THREE.Mesh(stiltGeo, stiltMat);
+      stilt.position.set(sx, 0.9, sz);
+      building.add(stilt);
+    });
+
+    // Main House Structure
+    const houseGeo = new THREE.BoxGeometry(2.2, 1.5, 2.2);
+    const house = new THREE.Mesh(houseGeo, buildingStoneMat);
+    house.position.y = 2.5;
+    house.castShadow = true;
+    building.add(house);
+
+    // Glowing Windows
+    const winMat = buildingWindowMat;
+    const winGeo = new THREE.PlaneGeometry(0.4, 0.45);
+    const w1 = new THREE.Mesh(winGeo, winMat);
+    w1.position.set(0, 2.5, 1.11);
+    building.add(w1);
+
+    const w2 = new THREE.Mesh(winGeo, winMat);
+    w2.position.set(1.11, 2.5, 0);
+    w2.rotation.y = Math.PI / 2;
+    building.add(w2);
+
+    // Pitched Roof
+    const roofGeo = new THREE.ConeGeometry(1.9, 1.1, 4);
+    const roofMat = lighthouseRedMat;
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.y = 3.8;
+    roof.rotation.y = Math.PI / 4;
+    building.add(roof);
+
+    return building;
+  }
+
+  function createNavBuoy() {
+    const buoy = new THREE.Group();
+
+    const buoyBody = new THREE.Mesh(
+      new THREE.ConeGeometry(0.45, 1.2, 7),
+      buoyRedMat
+    );
+    buoyBody.position.y = 0.4;
+    buoy.add(buoyBody);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.48, 0.08, 6, 12),
+      lighthouseWhiteMat
+    );
+    ring.position.y = 0.2;
+    ring.rotation.x = Math.PI / 2;
+    buoy.add(ring);
+
+    const light = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 6, 6),
+      buoyLightMat
+    );
+    light.position.y = 1.05;
+    buoy.add(light);
+
+    buoy.userData = {
+      isShip: true,
+      baseY: 0,
+      bobSpeed: random(2.2, 3.5),
+      bobAmount: 0.12,
+      rollSpeed: random(1.8, 3.0),
+      rollAmount: 0.14,
+      pitchAmount: 0.12,
+      phase: random(0, Math.PI * 2),
+    };
+
+    return buoy;
+  }
+
+  /* —— Place everything —— */
+
+  // Three manual presets only: "ultra" is denser than the scene's
+  // tuned defaults, "high" is those defaults, "light" is a sparse
+  // pass for weaker hardware. No auto-detection here — whichever
+  // tier the player picked in Graphics settings applies as-is.
+  const activeTier = qualityTier === "ultra" ? "ultra" : qualityTier === "light" ? "light" : "high";
+
+  // Layer groups for dynamic realm switching
+  const forestGroup = new THREE.Group();
+  const grassGroup = new THREE.Group();
+  const floraGroup = new THREE.Group();
+  const animalsGroup = new THREE.Group();
+  const rocksGroup = new THREE.Group();
+  const desertRocksGroup = new THREE.Group();
+  const hellRealmGroup = new THREE.Group();
+  const iceGlacierGroup = new THREE.Group();
+  const oceanRealmGroup = new THREE.Group();
+
+  forest.add(forestGroup);
+  forest.add(grassGroup);
+  forest.add(floraGroup);
+  forest.add(animalsGroup);
+  forest.add(rocksGroup);
+  forest.add(desertRocksGroup);
+  forest.add(hellRealmGroup);
+  forest.add(iceGlacierGroup);
+  forest.add(oceanRealmGroup);
+
+  let treeCount = CONFIG.treeCount;
+  let grassCount = CONFIG.grassCount;
+  let nearBoardCount = CONFIG.nearBoardGrassCount;
+  let cloudCount = 0;
+  let butterflyCount = CONFIG.butterflyCount;
+  let mushroomCount = CONFIG.mushroomCount;
+  let flowerCount = CONFIG.flowerCount;
+  let logCount = CONFIG.logCount;
+
+  if (activeTier === "ultra") {
+    treeCount = 58;
+    grassCount = 380;
+    nearBoardCount = 190;
+    cloudCount = 0;
+    butterflyCount = 16;
+    mushroomCount = 20;
+    flowerCount = 26;
+    logCount = 10;
+  } else if (activeTier === "light") {
+    treeCount = 8;
+    grassCount = 15;
+    nearBoardCount = 5;
+    cloudCount = 0;
+    butterflyCount = 0;
+    mushroomCount = 2;
+    flowerCount = 3;
+    logCount = 2;
+  }
+
+  // 1. Forest Greenery & Trees
+  for (let i = 0; i < treeCount; i++) {
+    const tree = createTree();
+    const { x, z } = forestPosition();
+    tree.position.set(x, 0, z);
+    forestGroup.add(tree);
+  }
+
+  const bushCount = activeTier === "light" ? 6 : activeTier === "ultra" ? 62 : CONFIG.bushCount;
+  for (let i = 0; i < bushCount; i++) {
+    const bush = createBush();
+    const { x, z } = forestPosition();
+    bush.position.set(x, 0, z);
+    bush.scale.setScalar(random(0.8, 1.4));
+    forestGroup.add(bush);
+  }
+
+  for (let i = 0; i < logCount; i++) {
+    const log = createLog();
+    const { x, z } = forestPosition();
+    log.position.set(x, 0.25, z);
+    log.rotation.y = random(0, Math.PI * 2);
+    log.scale.setScalar(random(0.7, 1.1));
+    forestGroup.add(log);
+  }
+
+  // 2. Standard Rocks (Used in Forest & Ocean)
+  const rockCount = activeTier === "light" ? 5 : activeTier === "ultra" ? 52 : CONFIG.rockCount;
+  for (let i = 0; i < rockCount; i++) {
+    const rock = createRock();
+    const { x, z } = forestPosition();
+    rock.position.x = x;
+    rock.position.z = z;
+    rocksGroup.add(rock);
+  }
+
+  // 3. Grass
+  for (let i = 0; i < grassCount; i++) {
+    const grass = createGrass();
+    const { x, z } = forestPosition();
+    grass.position.set(x, 0, z);
+    grass.scale.setScalar(random(0.7, 1.3));
+    grassGroup.add(grass);
+  }
+
+  // Dense Grass Ringing Directly Around the Board Edges
+  for (let i = 0; i < nearBoardCount; i++) {
+    const grass = createGrass();
+    const { x, z } = nearBoardPosition();
+    grass.position.set(x, 0, z);
+    grass.scale.setScalar(random(0.8, 1.45));
+    grassGroup.add(grass);
+  }
+
+  // 4. Wildlife & Animals
+  const deerCount = activeTier === "light" ? 0 : activeTier === "ultra" ? 6 : CONFIG.deerCount;
+  for (let i = 0; i < deerCount; i++) {
+    const deer = createDeer();
+    const { x, z } = forestPosition();
+    deer.position.set(x, 0, z);
+    deer.rotation.y = random(0, Math.PI * 2);
+    animalsGroup.add(deer);
+  }
+
+  // Rabbits
+  const rabbitCount = activeTier === "light" ? 0 : activeTier === "ultra" ? 9 : CONFIG.rabbitCount;
+  for (let i = 0; i < rabbitCount; i++) {
+    const rabbit = createRabbit();
+    const { x, z } = forestPosition();
+    rabbit.position.set(x, 0, z);
+    rabbit.rotation.y = random(0, Math.PI * 2);
+    animalsGroup.add(rabbit);
+  }
+
+  // Butterflies
+  const butterflies = [];
+  for (let i = 0; i < butterflyCount; i++) {
+    const bf = createButterfly();
+    const { x, z } = forestPosition();
+    bf.position.set(x, random(1.5, 4), z);
+    bf.userData.originX = x;
+    bf.userData.originZ = z;
+    butterflies.push(bf);
+    animalsGroup.add(bf);
+  }
+
+  // 5. Flora (Flowers & Mushrooms)
+  for (let i = 0; i < mushroomCount; i++) {
+    const mushroom = createMushroom();
+    const { x, z } = forestPosition();
+    mushroom.position.set(x, 0, z);
+    mushroom.rotation.y = random(0, Math.PI * 2);
+    floraGroup.add(mushroom);
+  }
+
+  for (let i = 0; i < flowerCount; i++) {
+    const flower = createFlower();
+    const { x, z } = forestPosition();
+    flower.position.set(x, 0, z);
+    flower.rotation.y = random(0, Math.PI * 2);
+    floraGroup.add(flower);
+  }
+
+  // 6. Campsites
   const campsite1 = createCampsite(13.5, -8.5, 0.4);
-  forest.add(campsite1);
+  forestGroup.add(campsite1);
 
   const campsite2 = createCampsite(-12.5, 11.5, 2.1);
-  forest.add(campsite2);
+  forestGroup.add(campsite2);
+
+  // 7. Desert Realm Layer (Sandstone Monoliths & Boulders)
+  const desertCount = activeTier === "light" ? 12 : activeTier === "ultra" ? 48 : 32;
+  for (let i = 0; i < desertCount; i++) {
+    const { x, z } = forestPosition();
+    if (i % 3 === 0) {
+      const pillar = new THREE.Mesh(geometries.desertPillar, desertPillarMat);
+      const s = random(0.8, 1.6);
+      pillar.scale.set(s, s * random(1.0, 1.8), s);
+      pillar.position.set(x, s * 2.25, z);
+      pillar.rotation.y = random(0, Math.PI * 2);
+      pillar.castShadow = true;
+      desertRocksGroup.add(pillar);
+    } else {
+      const dRock = new THREE.Mesh(geometries.desertRock, desertRockMat);
+      const s = random(0.9, 2.2);
+      dRock.scale.set(s * random(1.1, 1.6), s * random(0.6, 1.1), s * random(0.9, 1.4));
+      dRock.position.set(x, s * 0.45, z);
+      dRock.rotation.set(random(0, Math.PI), random(0, Math.PI), random(0, Math.PI));
+      dRock.castShadow = true;
+      desertRocksGroup.add(dRock);
+    }
+  }
+
+  // 8. Hell Realm Layer (Volcanic Spires & Magma Boulders)
+  const hellCount = activeTier === "light" ? 12 : activeTier === "ultra" ? 48 : 34;
+  for (let i = 0; i < hellCount; i++) {
+    const { x, z } = forestPosition();
+    if (i % 2 === 0) {
+      const spire = new THREE.Mesh(geometries.volcanicSpire, volcanicSpireMat);
+      const s = random(0.9, 1.7);
+      spire.scale.set(s, s * random(1.0, 1.8), s);
+      spire.position.set(x, s * 2.6, z);
+      spire.rotation.y = random(0, Math.PI * 2);
+      spire.castShadow = true;
+      hellRealmGroup.add(spire);
+    } else {
+      const mRock = new THREE.Mesh(geometries.magmaRock, magmaRockMat);
+      const s = random(0.8, 1.8);
+      mRock.scale.set(s * random(1.0, 1.5), s * random(0.7, 1.2), s);
+      mRock.position.set(x, s * 0.5, z);
+      mRock.rotation.set(random(0, Math.PI), random(0, Math.PI), random(0, Math.PI));
+      mRock.castShadow = true;
+      hellRealmGroup.add(mRock);
+    }
+  }
+
+  // 9. Glacier Ice Realm Layer (Towering Icebergs & Frozen Crystal Spires)
+  const iceCount = activeTier === "light" ? 12 : activeTier === "ultra" ? 48 : 34;
+  for (let i = 0; i < iceCount; i++) {
+    const { x, z } = forestPosition();
+    if (i % 2 === 0) {
+      const iceberg = new THREE.Mesh(geometries.iceberg, icebergMat);
+      const s = random(0.9, 1.8);
+      iceberg.scale.set(s * random(0.9, 1.4), s * random(1.0, 1.6), s);
+      iceberg.position.set(x, s * 3.1, z);
+      iceberg.rotation.y = random(0, Math.PI * 2);
+      iceberg.castShadow = true;
+      iceGlacierGroup.add(iceberg);
+    } else {
+      const iceSpire = new THREE.Mesh(geometries.iceSpire, iceSpireMat);
+      const s = random(0.8, 1.5);
+      iceSpire.scale.set(s, s * random(0.9, 1.5), s);
+      iceSpire.position.set(x, s * 2.25, z);
+      iceSpire.rotation.y = random(0, Math.PI * 2);
+      iceSpire.castShadow = true;
+      iceGlacierGroup.add(iceSpire);
+    }
+  }
+
+  // 10. Ocean Realm Layer (Ships, Boats, Lighthouses & Coastal Buildings)
+  const shipCount = activeTier === "light" ? 2 : 4;
+  for (let i = 0; i < shipCount; i++) {
+    const ship = createSailingShip();
+    const { x, z } = forestPosition();
+    ship.position.set(x, 0, z);
+    ship.rotation.y = random(0, Math.PI * 2);
+    const s = random(0.85, 1.35);
+    ship.scale.setScalar(s);
+    oceanRealmGroup.add(ship);
+  }
+
+  const boatCount = activeTier === "light" ? 3 : 8;
+  for (let i = 0; i < boatCount; i++) {
+    const boat = createSmallBoat({ isMotor: i % 2 === 0 });
+    const { x, z } = forestPosition();
+    boat.position.set(x, 0, z);
+    boat.rotation.y = random(0, Math.PI * 2);
+    const s = random(0.8, 1.25);
+    boat.scale.setScalar(s);
+    oceanRealmGroup.add(boat);
+  }
+
+  // 2 Lighthouses
+  const lighthouse1 = createLighthouse();
+  lighthouse1.position.set(16.5, 0, -11.5);
+  oceanRealmGroup.add(lighthouse1);
+
+  const lighthouse2 = createLighthouse();
+  lighthouse2.position.set(-15.5, 0, 14.5);
+  oceanRealmGroup.add(lighthouse2);
+
+  // Coastal Waterfront Stilt Buildings
+  const buildingCount = activeTier === "light" ? 2 : 5;
+  for (let i = 0; i < buildingCount; i++) {
+    const bldg = createCoastalBuilding();
+    const { x, z } = forestPosition();
+    bldg.position.set(x, 0, z);
+    bldg.rotation.y = random(0, Math.PI * 2);
+    oceanRealmGroup.add(bldg);
+  }
+
+  // Floating Navigational Buoys
+  const buoyCount = activeTier === "light" ? 2 : 6;
+  for (let i = 0; i < buoyCount; i++) {
+    const buoy = createNavBuoy();
+    const { x, z } = forestPosition();
+    buoy.position.set(x, 0, z);
+    oceanRealmGroup.add(buoy);
+  }
+
+  // 3D Sky Clouds
+  for (let i = 0; i < cloudCount; i++) {
+    const cloud = createCloud();
+    cloud.position.set(random(-35, 35), random(16, 26), random(-35, 35));
+    forest.add(cloud);
+  }
 
   /* ground */
 
@@ -1094,9 +1724,10 @@ export function createForest({ isMobile, qualityTier = "high" }) {
 
   const particleMaterial = new THREE.PointsMaterial({
     color: "#d7dfbd",
-    size: 0.045,
+    size: 0.08,
+    map: getCircleParticleTexture(),
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.45,
     depthWrite: false,
   });
 
@@ -1122,9 +1753,10 @@ export function createForest({ isMobile, qualityTier = "high" }) {
 
   const rainMaterial = new THREE.PointsMaterial({
     color: "#a8c8e8",
-    size: 0.08,
+    size: 0.14,
+    map: getRainStreakTexture(),
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.55,
     depthWrite: false,
   });
 
@@ -1136,8 +1768,15 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     rainParticles.visible = false;
   }
 
+  let currentThemeId = "clear";
+
   /** Gentle sway + wind wave + animal animation, called once per frame. */
   function update(time) {
+    if (currentThemeId === "heavy_rain") {
+      groundBumpMap.offset.x = (time * 0.04) % 1;
+      groundBumpMap.offset.y = (time * 0.025) % 1;
+    }
+
     const windTime = time * 2.2;
 
     forest.traverse((object) => {
@@ -1215,8 +1854,27 @@ export function createForest({ isMobile, qualityTier = "high" }) {
 
       // People idle animation
       if (data.isPerson) {
-        data.head.rotation.y = Math.sin(time * data.swaySpeed + data.swayOffset) * 0.15;
-        data.leftArm.rotation.x = Math.sin(time * data.swaySpeed * 1.3 + data.swayOffset) * 0.05 - 0.4;
+        data.head.rotation.y =
+          Math.sin(time * data.swaySpeed + data.swayOffset) * 0.15;
+        data.leftArm.rotation.x =
+          Math.sin(time * data.swaySpeed * 1.3 + data.swayOffset) * 0.05 - 0.4;
+      }
+
+      // Ship & boat buoyant floating & pitch-roll wave rocking
+      if (data.isShip) {
+        object.position.y =
+          (data.baseY || 0) +
+          Math.sin(time * data.bobSpeed + data.phase) * data.bobAmount;
+        object.rotation.z =
+          Math.sin(time * data.rollSpeed + data.phase) * data.rollAmount;
+        object.rotation.x =
+          Math.cos(time * (data.rollSpeed * 0.75) + data.phase) *
+          data.pitchAmount;
+      }
+
+      // Rotating lighthouse beacon searchlight
+      if (data.isLighthouse) {
+        data.beacon.rotation.y = time * 1.6;
       }
     });
 
@@ -1239,6 +1897,118 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     }
   }
 
+  function setTheme(themeId, animated = true) {
+    currentThemeId = themeId;
+    const theme = FOREST_THEMES[themeId] || FOREST_THEMES.clear;
+    const dur = animated ? 0.85 : 0;
+    const ease = "power2.out";
+
+    // Toggle Realm Asset Layer Visibilities
+    forestGroup.visible = themeId === "clear" || themeId === "heaven";
+    grassGroup.visible = themeId === "clear" || themeId === "heaven";
+    floraGroup.visible = themeId === "clear" || themeId === "heaven";
+    animalsGroup.visible = themeId === "clear";
+    rocksGroup.visible = themeId === "clear" || themeId === "heaven";
+    desertRocksGroup.visible = themeId === "desert";
+    hellRealmGroup.visible = themeId === "hell";
+    iceGlacierGroup.visible = themeId === "ice";
+    oceanRealmGroup.visible = themeId === "heavy_rain";
+
+    // 1. Ground Surface
+    const groundTargetColor = new THREE.Color(theme.ground);
+    if (!animated) {
+      groundMaterial.color.copy(groundTargetColor);
+      groundMaterial.roughness = theme.groundRoughness;
+      groundMaterial.metalness = theme.groundMetalness || 0.05;
+      groundMaterial.bumpScale = theme.groundBumpScale;
+      barkMaterial.color.set(theme.bark);
+      texturedRockMaterial.color.set(theme.rock);
+
+      theme.foliage.forEach((col, idx) => {
+        if (foliageMaterials[idx]) foliageMaterials[idx].color.set(col);
+      });
+      theme.bush.forEach((col, idx) => {
+        if (bushMaterials[idx]) bushMaterials[idx].color.set(col);
+      });
+      theme.grass.forEach((col, idx) => {
+        if (grassMaterials[idx]) grassMaterials[idx].color.set(col);
+      });
+      return;
+    }
+
+    gsap.to(groundMaterial.color, {
+      r: groundTargetColor.r,
+      g: groundTargetColor.g,
+      b: groundTargetColor.b,
+      duration: dur,
+      ease,
+    });
+    gsap.to(groundMaterial, {
+      roughness: theme.groundRoughness,
+      metalness: theme.groundMetalness || 0.05,
+      bumpScale: theme.groundBumpScale,
+      duration: dur,
+      ease,
+    });
+
+    const barkCol = new THREE.Color(theme.bark);
+    gsap.to(barkMaterial.color, {
+      r: barkCol.r,
+      g: barkCol.g,
+      b: barkCol.b,
+      duration: dur,
+      ease,
+    });
+
+    const rockCol = new THREE.Color(theme.rock);
+    gsap.to(texturedRockMaterial.color, {
+      r: rockCol.r,
+      g: rockCol.g,
+      b: rockCol.b,
+      duration: dur,
+      ease,
+    });
+
+    theme.foliage.forEach((col, idx) => {
+      if (foliageMaterials[idx]) {
+        const c = new THREE.Color(col);
+        gsap.to(foliageMaterials[idx].color, {
+          r: c.r,
+          g: c.g,
+          b: c.b,
+          duration: dur,
+          ease,
+        });
+      }
+    });
+
+    theme.bush.forEach((col, idx) => {
+      if (bushMaterials[idx]) {
+        const c = new THREE.Color(col);
+        gsap.to(bushMaterials[idx].color, {
+          r: c.r,
+          g: c.g,
+          b: c.b,
+          duration: dur,
+          ease,
+        });
+      }
+    });
+
+    theme.grass.forEach((col, idx) => {
+      if (grassMaterials[idx]) {
+        const c = new THREE.Color(col);
+        gsap.to(grassMaterials[idx].color, {
+          r: c.r,
+          g: c.g,
+          b: c.b,
+          duration: dur,
+          ease,
+        });
+      }
+    });
+  }
+
   function dispose() {
     Object.values(geometries).forEach((geometry) => geometry.dispose());
     groundGeometry.dispose();
@@ -1255,7 +2025,26 @@ export function createForest({ isMobile, qualityTier = "high" }) {
     groundBumpMap.dispose();
     rockTexture.dispose();
     texturedRockMaterial.dispose();
+    desertRockMat.dispose();
+    desertPillarMat.dispose();
+    volcanicSpireMat.dispose();
+    magmaRockMat.dispose();
+    icebergMat.dispose();
+    iceSpireMat.dispose();
+    shipHullMat.dispose();
+    shipSailMat.dispose();
+    boatHullMat.dispose();
+    boatWoodMat.dispose();
+    lighthouseWhiteMat.dispose();
+    lighthouseRedMat.dispose();
+    buildingStoneMat.dispose();
+    buildingWindowMat.dispose();
+    buoyRedMat.dispose();
+    buoyLightMat.dispose();
+    foliageMaterials.forEach((m) => m.dispose());
+    bushMaterials.forEach((m) => m.dispose());
+    grassMaterials.forEach((m) => m.dispose());
   }
 
-  return { forest, ground, particles, update, dispose };
+  return { forest, ground, particles, update, setTheme, dispose };
 }

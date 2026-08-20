@@ -407,7 +407,7 @@ export function placementsFor(tokens) {
       const base = baseWorldPosition(token);
 
       if (group.length === 1) {
-        placements.set(token.id, { ...base });
+        placements.set(token.id, { ...base, count: 1 });
         return;
       }
 
@@ -416,6 +416,7 @@ export function placementsFor(tokens) {
       placements.set(token.id, {
         x: base.x + Math.cos(angle) * STACK_RADIUS,
         z: base.z + Math.sin(angle) * STACK_RADIUS,
+        count: group.length,
       });
     });
   }
