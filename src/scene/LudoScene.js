@@ -475,7 +475,7 @@ export class LudoScene {
       case "3d":
       case "default":
       default:
-        this.rig.setAngle(0, 0, isMobile ? 18.5 : 18.2, 11.2);
+        this.rig.setAngle(isMobile ? 0.38 : 0.08, 0, isMobile ? 19.2 : 18.2, isMobile ? 12.8 : 11.2);
         break;
     }
   }

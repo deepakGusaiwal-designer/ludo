@@ -1,7 +1,10 @@
 import * as THREE from "three";
 import gsap from "gsap";
 
-const DEFAULT_DISTANCE = 18.2;
+const isMobileScreen = typeof window !== "undefined" && window.innerWidth < 768;
+const DEFAULT_DISTANCE = isMobileScreen ? 19.2 : 18.2;
+const DEFAULT_HEIGHT = isMobileScreen ? 12.8 : 11.2;
+const DEFAULT_ROT_X = isMobileScreen ? 0.38 : 0.08;
 
 /**
  * Camera rig with unrestricted user orbit control and angle preset support.
@@ -11,16 +14,16 @@ const DEFAULT_DISTANCE = 18.2;
  */
 export function createCameraRig(camera, domElement) {
   const target = new THREE.Vector3(0, 0, 0);
-  const orbit = { distance: DEFAULT_DISTANCE, height: 11.2 };
+  const orbit = { distance: DEFAULT_DISTANCE, height: DEFAULT_HEIGHT };
 
   let dragging = false;
   let previousX = 0;
   let previousY = 0;
 
-  let targetRotationX = 0;
+  let targetRotationX = DEFAULT_ROT_X;
   let targetRotationY = 0;
 
-  let currentRotationX = 0;
+  let currentRotationX = DEFAULT_ROT_X;
   let currentRotationY = 0;
 
   const activePointers = new Map();

@@ -9,7 +9,7 @@ const LOADING_STEPS = [
   "Entering the board...",
 ];
 
-export function Preloader({ isReady }) {
+export function Preloader({ isReady, onComplete }) {
   const [progress, setProgress] = useState(0);
   const [statusIndex, setStatusIndex] = useState(0);
   const [isDone, setIsDone] = useState(false);
@@ -41,14 +41,17 @@ export function Preloader({ isReady }) {
             scale: 1.05,
             duration: 0.65,
             ease: "power2.inOut",
-            onComplete: () => setIsDone(true),
+            onComplete: () => {
+              setIsDone(true);
+              onComplete?.();
+            },
           });
         }, 300);
       }
     }, 40);
 
     return () => clearInterval(interval);
-  }, [isReady]);
+  }, [isReady, onComplete]);
 
   if (isDone) return null;
 
@@ -56,9 +59,7 @@ export function Preloader({ isReady }) {
     <div className="preloader-overlay">
       {/* Ambient background particles and glowing orbs */}
       <div className="preloader-backdrop-glow preloader-glow-top" />
-      <div className="preloader-backdrop-glow preloader-glow-bottom" />
-
-      <div className="preloader-card">
+      <div className="preloader-content-wrap">
         {/* Animated Brand Logo */}
         <div className="preloader-logo-wrap">
           <img src="/logo.png" alt="Ludo Logo" className="preloader-logo-img" />
