@@ -40,6 +40,8 @@ export function LudoGame() {
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
 
+  const [isPreloaderDone, setIsPreloaderDone] = useState(false);
+
   const onlineState = useOnlineLudo();
 
   const { sceneRef, ready } = useLudoScene(containerRef);
@@ -56,10 +58,10 @@ export function LudoGame() {
   } = useLudoGame(sceneRef, ready, onlineState);
 
   useEffect(() => {
-    if (onlineState.notification) {
+    if (isPreloaderDone && onlineState.notification) {
       toast.info(onlineState.notification, { duration: 2500 });
     }
-  }, [onlineState.notification]);
+  }, [isPreloaderDone, onlineState.notification]);
 
   const handleCopyRoomCode = () => {
     if (onlineState?.room?.code) {
@@ -100,7 +102,7 @@ export function LudoGame() {
 
   return (
     <div className="ludo">
-      <Preloader isReady={ready} />
+      <Preloader isReady={ready} onComplete={() => setIsPreloaderDone(true)} />
       <div className="canvas-host" ref={containerRef} />
 
       {/* Modern Sonner Toast Container (Compact, Subtle & Offset Below Header) */}
@@ -212,11 +214,13 @@ export function LudoGame() {
         </button>
       </div>
 
-      <TurnPanel
-        state={state}
-        playerConfig={playerConfig}
-        onlineState={onlineState}
-      />
+      {isPreloaderDone && (
+        <TurnPanel
+          state={state}
+          playerConfig={playerConfig}
+          onlineState={onlineState}
+        />
+      )}
 
       <WinOverlay winner={state.winner} onRestart={restart} />
 
