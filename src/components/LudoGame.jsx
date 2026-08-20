@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CpuIcon, Globe02Icon, RefreshIcon, Settings02Icon, UserIcon } from "hugeicons-react";
+import {
+  CloudAngledRainZapIcon,
+  CpuIcon,
+  Globe02Icon,
+  RefreshIcon,
+  Settings02Icon,
+  UserIcon,
+} from "hugeicons-react";
 import { Toaster, toast } from "sonner";
 
 import { useLudoGame } from "../hooks/useLudoGame.js";
 import { useLudoScene } from "../hooks/useLudoScene.js";
 import { useOnlineLudo } from "../hooks/useOnlineLudo.js";
 
+import { AmbientToggle } from "./AmbientToggle.jsx";
 import { AudioToggle } from "./AudioToggle.jsx";
 import { CameraControls } from "./CameraControls.jsx";
 import { CharacterModal } from "./CharacterModal.jsx";
@@ -14,7 +22,9 @@ import { OnlineLobbyModal } from "./OnlineLobbyModal.jsx";
 import { Preloader } from "./Preloader.jsx";
 import { QualityModal } from "./QualityModal.jsx";
 import { ResetModal } from "./ResetModal.jsx";
+import { TimeOfDayDropdown } from "./TimeOfDayDropdown.jsx";
 import { TurnPanel } from "./TurnPanel.jsx";
+import { WeatherModal } from "./WeatherModal.jsx";
 import { WinOverlay } from "./WinOverlay.jsx";
 
 /**
@@ -28,6 +38,7 @@ export function LudoGame() {
   const [isOnlineModalOpen, setIsOnlineModalOpen] = useState(false);
   const [isQualityModalOpen, setIsQualityModalOpen] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
+  const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
 
   const onlineState = useOnlineLudo();
 
@@ -135,11 +146,20 @@ export function LudoGame() {
         <div className="hud-actions">
           <button
             type="button"
+            className="icon-hud-btn weather-hud-btn"
+            onClick={() => setIsWeatherModalOpen(true)}
+            title="Environment & Realm Modes"
+          >
+            <CloudAngledRainZapIcon size={19} />
+            <span className="hud-btn-text">Mode</span>
+          </button>
+          <button
+            type="button"
             className="icon-hud-btn online-hud-btn"
             onClick={() => setIsOnlineModalOpen(true)}
             title="Play Online with Friends"
           >
-            <Globe02Icon size={16} />
+            <Globe02Icon size={19} />
             <span className="hud-btn-text">Online</span>
           </button>
           <button
@@ -148,7 +168,7 @@ export function LudoGame() {
             onClick={() => setIsLobbyOpen(true)}
             title="Change Player & AI Settings"
           >
-            <Settings02Icon size={16} />
+            <Settings02Icon size={19} />
             <span className="hud-btn-text">Setup</span>
           </button>
           <button
@@ -157,14 +177,16 @@ export function LudoGame() {
             onClick={() => setIsResetModalOpen(true)}
             title="Reset game state"
           >
-            <RefreshIcon size={16} />
+            <RefreshIcon size={19} />
           </button>
         </div>
       </header>
 
-      {/* Floating Bottom-Left Controls: Camera & Audio */}
+      {/* Floating Bottom-Left Controls: Camera, Time of Day, Ambient & SFX Audio */}
       <div className="hud-corner-left">
         <CameraControls sceneRef={sceneRef} />
+        <TimeOfDayDropdown sceneRef={sceneRef} />
+        <AmbientToggle />
         <AudioToggle />
       </div>
 
@@ -176,7 +198,7 @@ export function LudoGame() {
           onClick={() => setIsCharacterModalOpen(true)}
           title="Choose 3D Pawn Character"
         >
-          <UserIcon size={16} />
+          <UserIcon size={18} />
           <span className="hud-btn-text">Hero</span>
         </button>
         <button
@@ -185,7 +207,7 @@ export function LudoGame() {
           onClick={() => setIsQualityModalOpen(true)}
           title="3D Graphics Performance Settings"
         >
-          <CpuIcon size={16} />
+          <CpuIcon size={18} />
           <span className="hud-btn-text">Graphics</span>
         </button>
       </div>
@@ -202,6 +224,12 @@ export function LudoGame() {
         isOpen={isResetModalOpen}
         onConfirm={handleConfirmReset}
         onCancel={() => setIsResetModalOpen(false)}
+      />
+
+      <WeatherModal
+        isOpen={isWeatherModalOpen}
+        sceneRef={sceneRef}
+        onCancel={() => setIsWeatherModalOpen(false)}
       />
 
       <CharacterModal

@@ -60,6 +60,13 @@ export async function preloadAnimations() {
     const promises = Object.entries(ANIMATION_PATHS).map(async ([key, url]) => {
       if (animationCache.has(key)) return [key, animationCache.get(key)];
       try {
+        const res = await fetch(url, { method: "HEAD" });
+        const contentType = res.headers.get("content-type") || "";
+        // If file doesn't exist or Vite serves SPA HTML fallback, skip silently
+        if (!res.ok || contentType.includes("text/html")) {
+          return [key, null];
+        }
+
         const gltf = await new Promise((resolve, reject) => {
           gltfLoader.load(url, resolve, undefined, reject);
         });
@@ -70,8 +77,8 @@ export async function preloadAnimations() {
           animationCache.set(key, clip);
           return [key, clip];
         }
-      } catch (err) {
-        console.warn(`[AnimationManager] Failed to load GLB animation [${key}]:`, err);
+      } catch {
+        // Fall back to procedural physics animation without console noise
       }
       return [key, null];
     });

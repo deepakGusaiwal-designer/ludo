@@ -48,12 +48,12 @@ export function createEffectsSystem(scene) {
 
       scene.add(mesh);
 
-      const vx = (Math.random() - 0.5) * 4.5;
-      const vy = 4 + Math.random() * 5.5;
-      const vz = (Math.random() - 0.5) * 4.5;
+      const vx = (Math.random() - 0.5) * 6.5;
+      const vy = 5.5 + Math.random() * 7.5;
+      const vz = (Math.random() - 0.5) * 6.5;
 
-      const rx = (Math.random() - 0.5) * 12;
-      const ry = (Math.random() - 0.5) * 12;
+      const rx = (Math.random() - 0.5) * 14;
+      const ry = (Math.random() - 0.5) * 14;
 
       activeParticles.push({
         mesh,
@@ -63,7 +63,7 @@ export function createEffectsSystem(scene) {
         rx,
         ry,
         life: 1.0,
-        maxLife: 1.8 + Math.random() * 0.8,
+        maxLife: 2.2 + Math.random() * 1.2,
         age: 0,
       });
     }

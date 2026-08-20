@@ -14,12 +14,13 @@ export function AudioToggle() {
   return (
     <button
       type="button"
-      className="icon-hud-btn"
+      className="icon-hud-btn sfx-hud-btn"
       onClick={handleToggle}
-      title={muted ? "Unmute Sound" : "Mute Sound"}
-      aria-label={muted ? "Unmute Sound" : "Mute Sound"}
+      title={muted ? "Unmute Game SFX" : "Mute Game SFX"}
+      aria-label={muted ? "Unmute Game SFX" : "Mute Game SFX"}
     >
-      {muted ? <VolumeOffIcon size={16} /> : <VolumeHighIcon size={16} />}
+      {muted ? <VolumeOffIcon size={18} /> : <VolumeHighIcon size={18} />}
+      <span className="hud-btn-text">SFX</span>
     </button>
   );
 }

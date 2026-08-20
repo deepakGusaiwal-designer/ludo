@@ -9,11 +9,13 @@ import { baseWorldPosition, placementsFor } from "../game/rules.js";
 import {
   playClick,
   playDiceRoll,
+  playThunderCrash,
   playTokenCapture,
   playTokenFinish,
   playTokenHop,
   playTokenSpawn,
   playVictoryFanfare,
+  setAmbientMode,
 } from "../game/audio.js";
 
 import { ANIMATION_KEYS } from "./animationManager.js";
@@ -24,6 +26,7 @@ import { createEffectsSystem } from "./effects.js";
 import { createForest } from "./forest.js";
 import { createTokens } from "./tokens.js";
 import { disposeMaterials } from "./materials.js";
+import { celebration } from "../utils/celebrationEffects.js";
 
 import {
   getSavedBrightness,
@@ -31,6 +34,15 @@ import {
   PerformanceMonitor,
   QUALITY_TIERS,
 } from "./performanceManager.js";
+import {
+  WEATHER_PRESETS,
+  TIME_OF_DAY_PRESETS,
+  getSelectedWeather,
+  saveSelectedWeather,
+  getSelectedTimeOfDay,
+  saveSelectedTimeOfDay,
+  createWeatherParticles,
+} from "./weatherManager.js";
 
 /**
  * Owns everything three.js. React never touches this directly
@@ -63,8 +75,12 @@ export class LudoScene {
     const skyColor = new THREE.Color("#203127");
     this.scene.background = skyColor;
 
-    // Atmospheric forest fog
-    this.scene.fog = new THREE.Fog(skyColor, isMobile ? 26 : 20, isMobile ? 75 : 60);
+    // Atmospheric forest fog (reduced density for crisp visibility)
+    this.scene.fog = new THREE.Fog(
+      skyColor,
+      isMobile ? 38 : 35,
+      isMobile ? 100 : 95
+    );
 
     /* camera */
 
@@ -112,45 +128,55 @@ export class LudoScene {
 
     /* lighting */
 
-    this.scene.add(new THREE.HemisphereLight("#c8d6c5", "#1b281f", isMobile ? 1.4 : 1.25));
+    this.hemiLight = new THREE.HemisphereLight("#c8d6c5", "#1b281f", isMobile ? 1.4 : 1.25);
+    this.scene.add(this.hemiLight);
 
     // Cozy atmospheric ambient fill light
-    const ambient = new THREE.AmbientLight("#d4c4a8", isMobile ? 0.50 : 0.42);
-    this.scene.add(ambient);
+    this.ambientLight = new THREE.AmbientLight("#d4c4a8", isMobile ? 0.50 : 0.42);
+    this.scene.add(this.ambientLight);
 
-    const sun = new THREE.DirectionalLight("#ffd8a8", 2.2);
+    this.sunLight = new THREE.DirectionalLight("#ffd8a8", 2.2);
 
-    sun.position.set(-15, 28, 12);
-    sun.castShadow = effectiveTier !== QUALITY_TIERS.LIGHT;
+    this.sunLight.position.set(-15, 28, 12);
+    this.sunLight.castShadow = effectiveTier !== QUALITY_TIERS.LIGHT;
     const shadowMapSize =
       effectiveTier === QUALITY_TIERS.ULTRA ? 4096 : effectiveTier === QUALITY_TIERS.HIGH ? 2048 : 1024;
-    sun.shadow.mapSize.width = shadowMapSize;
-    sun.shadow.mapSize.height = shadowMapSize;
-    sun.shadow.camera.left = -25;
-    sun.shadow.camera.right = 25;
-    sun.shadow.camera.top = 25;
-    sun.shadow.camera.bottom = -25;
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 70;
-    sun.shadow.bias = -0.0003;
+    this.sunLight.shadow.mapSize.width = shadowMapSize;
+    this.sunLight.shadow.mapSize.height = shadowMapSize;
+    this.sunLight.shadow.camera.left = -25;
+    this.sunLight.shadow.camera.right = 25;
+    this.sunLight.shadow.camera.top = 25;
+    this.sunLight.shadow.camera.bottom = -25;
+    this.sunLight.shadow.camera.near = 1;
+    this.sunLight.shadow.camera.far = 70;
+    this.sunLight.shadow.bias = -0.0003;
 
-    this.scene.add(sun);
+    this.scene.add(this.sunLight);
 
     // Cool blue-green fill from opposite side for forest depth
-    const fill = new THREE.DirectionalLight("#a4c8b0", 0.6);
-    fill.position.set(12, 10, -14);
-    this.scene.add(fill);
+    this.fillLight = new THREE.DirectionalLight("#a4c8b0", 0.6);
+    this.fillLight.position.set(12, 10, -14);
+    this.scene.add(this.fillLight);
 
     // Warm ground bounce light
-    const bounce = new THREE.PointLight("#d4a96a", 0.5, 40);
-    bounce.position.set(0, 0.5, 0);
-    this.scene.add(bounce);
+    this.bounceLight = new THREE.PointLight("#d4a96a", 0.5, 40);
+    this.bounceLight.position.set(0, 0.5, 0);
+    this.scene.add(this.bounceLight);
+
+    /* weather & environment */
+    this.weatherParticles = createWeatherParticles(this.scene);
+    this.currentWeather = getSelectedWeather();
+    this.currentTimeOfDay = getSelectedTimeOfDay();
+    this.lightningTimer = 0;
+    this.nextLightningTime = 3.5 + Math.random() * 4.5;
+    this.applyEnvironment(this.currentWeather, this.currentTimeOfDay, false);
 
     /* contents */
 
     this.effects = createEffectsSystem(this.scene);
 
     this.forest = createForest({ isMobile, qualityTier: effectiveTier });
+    this.forest.setTheme(this.currentWeather, false);
 
     this.perfMonitor = new PerformanceMonitor(null);
 
@@ -228,6 +254,19 @@ export class LudoScene {
 
     this.effects.update(delta);
 
+    if (this.weatherParticles) {
+      this.weatherParticles.update(delta, elapsedTime);
+    }
+
+    if (this.currentWeather === "heavy_rain") {
+      this.lightningTimer += delta;
+      if (this.lightningTimer >= this.nextLightningTime) {
+        this.lightningTimer = 0;
+        this.nextLightningTime = 3.5 + Math.random() * 5.0;
+        this.triggerLightningFlash();
+      }
+    }
+
     if (this.tokens && typeof this.tokens.update === "function") {
       this.tokens.update(elapsedTime, delta);
     }
@@ -261,6 +300,7 @@ export class LudoScene {
       this.forest.dispose();
 
       this.forest = createForest({ isMobile, qualityTier: tier });
+      this.forest.setTheme(this.currentWeather, false);
       this.scene.add(this.forest.forest);
       this.scene.add(this.forest.ground);
       this.scene.add(this.forest.particles);
@@ -321,7 +361,11 @@ export class LudoScene {
   onClick(event) {
     this.updatePointer(event);
 
-    if (this.raycaster.intersectObject(this.dice.diceMesh).length) {
+    const diceTargets = [
+      this.dice.diceMesh,
+      ...(this.dice.clickableMeshes || []),
+    ];
+    if (this.raycaster.intersectObjects(diceTargets, true).length) {
       playClick();
       this.handlers.diceClick?.();
       return;
@@ -338,8 +382,12 @@ export class LudoScene {
   onPointerMove(event) {
     this.updatePointer(event);
 
+    const diceTargets = [
+      this.dice.diceMesh,
+      ...(this.dice.clickableMeshes || []),
+    ];
     const overDice =
-      this.raycaster.intersectObject(this.dice.diceMesh).length > 0;
+      this.raycaster.intersectObjects(diceTargets, true).length > 0;
 
     if (overDice !== this.diceHovered) {
       this.diceHovered = overDice;
@@ -587,12 +635,14 @@ export class LudoScene {
       playTokenFinish();
       mesh.userData.animator?.play(ANIMATION_KEYS.TALKING, { loop: THREE.LoopRepeat, duration: 0.3 });
       const pos = baseWorldPosition({ color, slot, position: result.to });
-      this.effects.triggerConfetti({ x: pos.x, y: TOKEN_HEIGHT + 0.5, z: pos.z }, 45);
+      this.effects.triggerConfetti({ x: pos.x, y: TOKEN_HEIGHT + 0.5, z: pos.z }, 85);
+      celebration.triggerCenterConfetti(1.25);
     }
 
     if (result.won) {
       playVictoryFanfare();
-      this.effects.triggerConfetti({ x: 0, y: 2, z: 0 }, 120);
+      this.effects.triggerConfetti({ x: 0, y: 2, z: 0 }, 180);
+      celebration.startVictoryCelebration(color);
     }
 
     // knocked-out pieces fly home while the turn continues
@@ -760,6 +810,270 @@ export class LudoScene {
   }
 
   /* ------------------------------------------------------ */
+  /* weather & environment                                   */
+  /* ------------------------------------------------------ */
+
+  setWeather(weatherId) {
+    this.currentWeather = weatherId;
+    saveSelectedWeather(weatherId);
+    this.applyEnvironment(weatherId, this.currentTimeOfDay, true);
+  }
+
+  setTimeOfDay(timeId) {
+    this.currentTimeOfDay = timeId;
+    saveSelectedTimeOfDay(timeId);
+    this.applyEnvironment(this.currentWeather, timeId, true);
+  }
+
+  getWeather() {
+    return this.currentWeather;
+  }
+
+  getTimeOfDay() {
+    return this.currentTimeOfDay;
+  }
+
+  triggerLightningFlash() {
+    if (this.disposed || !this.ambientLight || !this.sunLight) return;
+    playThunderCrash();
+    const baseAmb = this.targetAmbientIntensity || 0.35;
+    const baseSun = this.targetSunIntensity || 0.4;
+
+    const tl = gsap.timeline();
+    tl.to(this.ambientLight, {
+      intensity: baseAmb * 3.8,
+      duration: 0.05,
+      ease: "power1.in",
+    })
+      .to(this.ambientLight, { intensity: baseAmb * 1.3, duration: 0.04 })
+      .to(this.ambientLight, {
+        intensity: baseAmb * 4.8,
+        duration: 0.07,
+        ease: "power2.out",
+      })
+      .to(this.ambientLight, {
+        intensity: baseAmb,
+        duration: 0.45,
+        ease: "power2.out",
+      });
+
+    gsap.to(this.sunLight, {
+      intensity: baseSun * 3.2,
+      duration: 0.08,
+      yoyo: true,
+      repeat: 1,
+      ease: "power2.inOut",
+    });
+  }
+
+  applyEnvironment(weatherId, timeId, animated = true) {
+    const weather =
+      WEATHER_PRESETS.find((w) => w.id === weatherId) || WEATHER_PRESETS[0];
+    const time =
+      TIME_OF_DAY_PRESETS.find((t) => t.id === timeId) ||
+      TIME_OF_DAY_PRESETS[0];
+
+    const isMobile = window.innerWidth < 768;
+
+    // Target colors
+    const targetSky = new THREE.Color(weather.skyColor).multiplyScalar(
+      time.skyTint
+    );
+    const targetFog = new THREE.Color(weather.fogColor).multiplyScalar(
+      time.skyTint
+    );
+    const targetAmbientCol = new THREE.Color(weather.ambientColor);
+    const targetSunCol = new THREE.Color(weather.sunColor);
+    const targetHemiSky = new THREE.Color(weather.hemiSky).multiplyScalar(
+      time.skyTint
+    );
+    const targetHemiGround = new THREE.Color(weather.hemiGround);
+    const targetFillCol = new THREE.Color(weather.fillColor);
+    const targetBounceCol = new THREE.Color(weather.bounceColor);
+
+    // Target intensities
+    const targetAmbIntensity =
+      (isMobile ? 0.5 : 0.42) *
+      weather.ambientIntensityMult *
+      time.ambientMult;
+    const targetSunIntensity = time.sunIntensity * weather.sunIntensityMult;
+    const targetHemiIntensity =
+      (isMobile ? 1.4 : 1.25) *
+      weather.ambientIntensityMult *
+      time.ambientMult;
+    const targetFillIntensity =
+      0.6 * weather.sunIntensityMult * time.ambientMult;
+    const targetBounceIntensity =
+      0.5 * weather.ambientIntensityMult * time.ambientMult;
+
+    this.targetAmbientIntensity = targetAmbIntensity;
+    this.targetSunIntensity = targetSunIntensity;
+
+    const [targetSunX, targetSunY, targetSunZ] = time.sunPosition;
+    const dur = animated ? 0.85 : 0;
+    const ease = "power2.out";
+
+    if (!animated) {
+      if (this.scene.fog) {
+        this.scene.fog.color.copy(targetFog);
+        this.scene.fog.near = weather.fogNear;
+        this.scene.fog.far = weather.fogFar;
+      }
+      this.scene.background = targetSky;
+      if (this.ambientLight) {
+        this.ambientLight.color.copy(targetAmbientCol);
+        this.ambientLight.intensity = targetAmbIntensity;
+      }
+      if (this.sunLight) {
+        this.sunLight.color.copy(targetSunCol);
+        this.sunLight.intensity = targetSunIntensity;
+        this.sunLight.position.set(targetSunX, targetSunY, targetSunZ);
+      }
+      if (this.hemiLight) {
+        this.hemiLight.color.copy(targetHemiSky);
+        this.hemiLight.groundColor.copy(targetHemiGround);
+        this.hemiLight.intensity = targetHemiIntensity;
+      }
+      if (this.fillLight) {
+        this.fillLight.color.copy(targetFillCol);
+        this.fillLight.intensity = targetFillIntensity;
+      }
+      if (this.bounceLight) {
+        this.bounceLight.color.copy(targetBounceCol);
+        this.bounceLight.intensity = targetBounceIntensity;
+      }
+      this.weatherParticles?.setWeatherMode(weatherId);
+      this.forest?.setTheme(weatherId, false);
+      this.board?.setTheme?.(weatherId, false);
+      setAmbientMode(weatherId);
+      return;
+    }
+
+    // Animated transition
+    if (this.scene.fog) {
+      gsap.to(this.scene.fog.color, {
+        r: targetFog.r,
+        g: targetFog.g,
+        b: targetFog.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.scene.fog, {
+        near: weather.fogNear,
+        far: weather.fogFar,
+        duration: dur,
+        ease,
+      });
+    }
+
+    if (this.scene.background && this.scene.background.isColor) {
+      gsap.to(this.scene.background, {
+        r: targetSky.r,
+        g: targetSky.g,
+        b: targetSky.b,
+        duration: dur,
+        ease,
+      });
+    } else {
+      this.scene.background = targetSky;
+    }
+
+    if (this.ambientLight) {
+      gsap.to(this.ambientLight.color, {
+        r: targetAmbientCol.r,
+        g: targetAmbientCol.g,
+        b: targetAmbientCol.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.ambientLight, {
+        intensity: targetAmbIntensity,
+        duration: dur,
+        ease,
+      });
+    }
+
+    if (this.sunLight) {
+      gsap.to(this.sunLight.color, {
+        r: targetSunCol.r,
+        g: targetSunCol.g,
+        b: targetSunCol.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.sunLight, {
+        intensity: targetSunIntensity,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.sunLight.position, {
+        x: targetSunX,
+        y: targetSunY,
+        z: targetSunZ,
+        duration: dur * 1.2,
+        ease,
+      });
+    }
+
+    if (this.hemiLight) {
+      gsap.to(this.hemiLight.color, {
+        r: targetHemiSky.r,
+        g: targetHemiSky.g,
+        b: targetHemiSky.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.hemiLight.groundColor, {
+        r: targetHemiGround.r,
+        g: targetHemiGround.g,
+        b: targetHemiGround.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.hemiLight, {
+        intensity: targetHemiIntensity,
+        duration: dur,
+        ease,
+      });
+    }
+
+    if (this.fillLight) {
+      gsap.to(this.fillLight.color, {
+        r: targetFillCol.r,
+        g: targetFillCol.g,
+        b: targetFillCol.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.fillLight, {
+        intensity: targetFillIntensity,
+        duration: dur,
+        ease,
+      });
+    }
+
+    if (this.bounceLight) {
+      gsap.to(this.bounceLight.color, {
+        r: targetBounceCol.r,
+        g: targetBounceCol.g,
+        b: targetBounceCol.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.bounceLight, {
+        intensity: targetBounceIntensity,
+        duration: dur,
+        ease,
+      });
+    }
+
+    this.weatherParticles?.setWeatherMode(weatherId);
+    this.forest?.setTheme(weatherId, true);
+    this.board?.setTheme?.(weatherId, true);
+    setAmbientMode(weatherId);
+  }
+
+  /* ------------------------------------------------------ */
   /* teardown                                                */
   /* ------------------------------------------------------ */
 
@@ -785,6 +1099,7 @@ export class LudoScene {
     );
     window.removeEventListener("resize", this.onResize);
 
+    this.weatherParticles?.dispose();
     this.effects?.dispose();
     this.rig.dispose();
     this.dice.dispose();
