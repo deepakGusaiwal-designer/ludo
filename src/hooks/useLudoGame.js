@@ -15,7 +15,7 @@ import {
   evaluateRoll,
   tokenById,
 } from "../game/rules.js";
-import { getFairRoll } from "../game/fairDice.js";
+import { getFairRoll, resetFairDice } from "../game/fairDice.js";
 
 const FORFEIT_PAUSE = 1200;
 const DEAD_ROLL_PAUSE = 1100;
@@ -316,6 +316,12 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
   const restart = useCallback(() => {
     const m = machine.current;
 
+    // Fresh match, fresh dice — the fair-roll module's pity counters
+    // and shuffle bags are module-level state, so a leftover bias
+    // from the game that just ended would otherwise carry straight
+    // into the new one.
+    resetFairDice();
+
     m.state = createInitialState();
     m.status = "idle";
     m.dice = null;
@@ -338,6 +344,8 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
       } catch (e) {
         console.error("Failed to save player config:", e);
       }
+
+      resetFairDice();
 
       const m = machine.current;
       m.state = createInitialState();
