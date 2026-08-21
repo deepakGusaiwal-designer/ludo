@@ -51,12 +51,12 @@ export const BOARD_THEMES = {
     topMetalness: 0.05,
   },
   heaven: {
-    baseColor: "#3e5168", // Alabaster celestial quartz plinth
-    topColor: "#ffffff",  // Radiant cloud pearl
-    roughness: 0.22,
-    metalness: 0.45,
-    topRoughness: 0.25,
-    topMetalness: 0.3,
+    baseColor: "#fdfbf7", // Pure alabaster ivory plinth with golden sheen
+    topColor: "#ffffff",  // Radiant diamond marble
+    roughness: 0.16,
+    metalness: 0.35,
+    topRoughness: 0.18,
+    topMetalness: 0.25,
   },
   hell: {
     baseColor: "#1e0b0b", // Obsidian charred volcanic rock plinth
@@ -81,6 +81,26 @@ function isCenterCell(r, c) {
   return r >= 6 && r <= 8 && c >= 6 && c <= 8;
 }
 
+function createUnderglowTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+
+  const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gradient.addColorStop(0.0, "rgba(255, 255, 255, 1.0)");
+  gradient.addColorStop(0.22, "rgba(147, 197, 253, 0.95)");
+  gradient.addColorStop(0.5, "rgba(56, 189, 248, 0.6)");
+  gradient.addColorStop(0.78, "rgba(37, 99, 235, 0.2)");
+  gradient.addColorStop(1.0, "rgba(0, 0, 0, 0.0)");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 256, 256);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
 /**
  * The board itself: base, grid, the four yards, the colored
  * home lanes, the painted start/star squares and the center.
@@ -94,6 +114,60 @@ export function createBoard() {
     owned.push(geometry);
     return geometry;
   };
+
+  /* Bottom Night Glow Halo & Ambient Lighting */
+  const underglowTex = createUnderglowTexture();
+  const underglowMat = new THREE.MeshBasicMaterial({
+    map: underglowTex,
+    color: "#38bdf8",
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const underglowMesh = new THREE.Mesh(
+    track(new THREE.PlaneGeometry(BOARD_SIZE + 4.6, BOARD_SIZE + 4.6)),
+    underglowMat,
+  );
+  underglowMesh.rotation.x = -Math.PI / 2;
+  underglowMesh.position.y = 0.035;
+  boardGroup.add(underglowMesh);
+
+  // Soft inner core glow
+  const innerGlowMat = new THREE.MeshBasicMaterial({
+    map: underglowTex,
+    color: "#60a5fa",
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const innerGlowMesh = new THREE.Mesh(
+    track(new THREE.PlaneGeometry(BOARD_SIZE + 2.0, BOARD_SIZE + 2.0)),
+    innerGlowMat,
+  );
+  innerGlowMesh.rotation.x = -Math.PI / 2;
+  innerGlowMesh.position.y = 0.055;
+  boardGroup.add(innerGlowMesh);
+
+  // 4 Corner Ambient Underglow PointLights
+  const cornerLights = [];
+  const cornerOffsets = [
+    [-5.6, -5.6],
+    [5.6, -5.6],
+    [-5.6, 5.6],
+    [5.6, 5.6],
+  ];
+
+  cornerOffsets.forEach(([cx, cz]) => {
+    const light = new THREE.PointLight(0x38bdf8, 0.0, 8.0, 2.0);
+    light.position.set(cx, 0.22, cz);
+    boardGroup.add(light);
+    cornerLights.push(light);
+  });
 
   /* Base + Top Slab with dedicated theme materials */
   const baseMaterial = new THREE.MeshStandardMaterial({
@@ -330,13 +404,99 @@ export function createBoard() {
     });
   }
 
+  const GLOW_COLORS = {
+    clear: "#38bdf8",
+    ice: "#06b6d4",
+    heavy_rain: "#38bdf8",
+    desert: "#f59e0b",
+    heaven: "#fef08a",
+    hell: "#ff4500",
+  };
+
+  let targetGlowIntensity = 0.0;
+
+  function setNightGlow(isNight, themeId = "clear", animated = true) {
+    const glowHex = GLOW_COLORS[themeId] || "#38bdf8";
+    const targetColor = new THREE.Color(glowHex);
+    const targetOpacity = isNight ? 0.88 : 0.0;
+    const targetInnerOpacity = isNight ? 0.75 : 0.0;
+    targetGlowIntensity = isNight ? 1.4 : 0.0;
+
+    if (!animated) {
+      underglowMat.color.copy(targetColor);
+      underglowMat.opacity = targetOpacity;
+      innerGlowMat.color.copy(targetColor);
+      innerGlowMat.opacity = targetInnerOpacity;
+      cornerLights.forEach((l) => {
+        l.color.copy(targetColor);
+        l.intensity = targetGlowIntensity;
+      });
+      return;
+    }
+
+    gsap.to(underglowMat.color, {
+      r: targetColor.r,
+      g: targetColor.g,
+      b: targetColor.b,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+    gsap.to(underglowMat, {
+      opacity: targetOpacity,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+    gsap.to(innerGlowMat.color, {
+      r: targetColor.r,
+      g: targetColor.g,
+      b: targetColor.b,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+    gsap.to(innerGlowMat, {
+      opacity: targetInnerOpacity,
+      duration: 0.85,
+      ease: "power2.out",
+    });
+    cornerLights.forEach((l) => {
+      gsap.to(l.color, {
+        r: targetColor.r,
+        g: targetColor.g,
+        b: targetColor.b,
+        duration: 0.85,
+        ease: "power2.out",
+      });
+      gsap.to(l, {
+        intensity: targetGlowIntensity,
+        duration: 0.85,
+        ease: "power2.out",
+      });
+    });
+  }
+
+  function update(elapsedTime) {
+    if (targetGlowIntensity > 0.01) {
+      const pulse = 1.0 + Math.sin(elapsedTime * 2.2) * 0.04;
+      underglowMesh.scale.setScalar(pulse);
+      const lightPulse = targetGlowIntensity * (1.0 + Math.sin(elapsedTime * 2.0) * 0.1);
+      cornerLights.forEach((l) => {
+        l.intensity = lightPulse;
+      });
+    }
+  }
+
   return {
     boardGroup,
     setTheme,
+    setNightGlow,
+    update,
     dispose() {
       owned.forEach((geometry) => geometry.dispose());
       baseMaterial.dispose();
       topMaterial.dispose();
+      underglowMat.dispose();
+      innerGlowMat.dispose();
+      underglowTex.dispose();
     },
   };
 }
