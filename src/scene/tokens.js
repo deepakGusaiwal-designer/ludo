@@ -371,7 +371,7 @@ export function createTokens(boardGroup, initialCharacterId = null) {
     byId,
     all: [...byId.values()],
     setCharacter(charId) {
-      applyCharacter(charId);
+      return applyCharacter(charId);
     },
     getCharacter() {
       return currentCharacterId;

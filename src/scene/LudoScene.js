@@ -204,8 +204,11 @@ export class LudoScene {
 
     this.effects = createEffectsSystem(this.scene);
 
+    const isNightInit = this.currentTimeOfDay === "night" || this.currentTimeOfDay === "dark_night";
+
     this.forest = createForest({ isMobile, qualityTier: effectiveTier });
     this.forest.setTheme(this.currentWeather, false);
+    this.forest.setTimeOfDay?.(this.currentTimeOfDay, false);
 
     this.perfMonitor = new PerformanceMonitor(null);
 
@@ -214,6 +217,8 @@ export class LudoScene {
     this.scene.add(this.forest.particles);
 
     this.board = createBoard();
+    this.board.setTheme?.(this.currentWeather, false);
+    this.board.setNightGlow?.(isNightInit, this.currentWeather, false);
 
     this.scene.add(this.board.boardGroup);
 
@@ -522,7 +527,7 @@ export class LudoScene {
   }
 
   setCharacterPawn(charId) {
-    this.tokens?.setCharacter(charId);
+    return this.tokens?.setCharacter(charId);
   }
 
   /** Shows the pulsing ring under exactly these tokens. */
