@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Cancel01Icon, Tick02Icon, UserIcon } from "hugeicons-react";
+import { toast } from "sonner";
 import {
   CHARACTERS,
   getSelectedCharacter,
@@ -11,13 +12,44 @@ import { ShinyButton } from "./reactbits/ShinyButton.jsx";
 export function CharacterModal({ isOpen, sceneRef, onCancel }) {
   const modalRef = useModalPhysics();
   const [selectedChar, setSelectedChar] = useState(getSelectedCharacter);
+  const [isLoadingPawn, setIsLoadingPawn] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSelect = (charId) => {
+  const handleSelect = async (charId) => {
+    const char = CHARACTERS.find((c) => c.id === charId);
+    const charName = char ? char.name : "Character";
     setSelectedChar(charId);
     saveSelectedCharacter(charId);
-    sceneRef.current?.setCharacterPawn(charId);
+
+    if (charId === "classic") {
+      toast.success("Classic Token Selected!", {
+        id: "token-model-toast",
+        duration: 2200,
+      });
+      sceneRef.current?.setCharacterPawn(charId);
+      return;
+    }
+
+    setIsLoadingPawn(true);
+    toast.loading(`Loading ${charName} 3D Token Models...`, {
+      id: "token-model-toast",
+    });
+
+    try {
+      await sceneRef.current?.setCharacterPawn(charId);
+      toast.success(`✨ ${charName} Token Selected!`, {
+        id: "token-model-toast",
+        duration: 2500,
+      });
+    } catch {
+      toast.error(`Failed to load ${charName} token model.`, {
+        id: "token-model-toast",
+        duration: 3000,
+      });
+    } finally {
+      setIsLoadingPawn(false);
+    }
   };
 
   return (
