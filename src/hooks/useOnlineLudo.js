@@ -50,7 +50,8 @@ export function useOnlineLudo() {
           "reconnect_room",
           { roomCode: savedCode, sessionToken },
           ({ success, room: reconnectedRoom, myColor: restoredColor, gameState }) => {
-            if (success) {
+            const isEnded = gameState && (gameState.status === "over" || gameState.state?.winner);
+            if (success && !isEnded) {
               setRoom({ ...reconnectedRoom });
               if (restoredColor) setMyColor(restoredColor);
               if (gameState) setReconnectedGameState(gameState);

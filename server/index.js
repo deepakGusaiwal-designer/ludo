@@ -223,6 +223,9 @@ io.on("connection", (socket) => {
     if (!room) return;
 
     room.gameState = gameState;
+    if (gameState && (gameState.status === "over" || gameState.state?.winner)) {
+      room.started = false;
+    }
     socket.to(roomCode).emit("remote_state_sync", gameState);
   });
 

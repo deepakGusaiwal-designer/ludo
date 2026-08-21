@@ -43,6 +43,7 @@ import {
   saveSelectedTimeOfDay,
   createWeatherParticles,
 } from "./weatherManager.js";
+import { createCelestialSystem } from "./celestial.js";
 
 /**
  * Owns everything three.js. React never touches this directly
@@ -88,7 +89,7 @@ export class LudoScene {
       42,
       container.clientWidth / container.clientHeight,
       0.1,
-      100,
+      180,
     );
 
     this.camera.position.set(0, 17, 21);
@@ -162,6 +163,34 @@ export class LudoScene {
     this.bounceLight = new THREE.PointLight("#d4a96a", 0.5, 40);
     this.bounceLight.position.set(0, 0.5, 0);
     this.scene.add(this.bounceLight);
+
+    // Focused Board Center Spotlight for Night / Midnight Play
+    this.boardSpotLight = new THREE.SpotLight(0xffffff, 0, 48, Math.PI / 4.0, 0.5, 1.2);
+    this.boardSpotLight.position.set(0, 22, 0);
+    this.boardSpotLight.target.position.set(0, 0.5, 0);
+    this.scene.add(this.boardSpotLight);
+    this.scene.add(this.boardSpotLight.target);
+
+    // 4 Focused Quadrant Spotlights for High-Contrast Vivid Night Gameplay
+    this.quadrantSpotLights = [];
+    const quadPositions = [
+      { pos: [-3.2, 12, -3.2], target: [-3.2, 0.5, -3.2] }, // Red
+      { pos: [3.2, 12, -3.2], target: [3.2, 0.5, -3.2] },   // Green
+      { pos: [3.2, 12, 3.2], target: [3.2, 0.5, 3.2] },     // Yellow
+      { pos: [-3.2, 12, 3.2], target: [-3.2, 0.5, 3.2] },   // Blue
+    ];
+
+    quadPositions.forEach((q) => {
+      const qLight = new THREE.SpotLight(0xffffff, 0, 24, Math.PI / 3.8, 0.55, 1.4);
+      qLight.position.set(...q.pos);
+      qLight.target.position.set(...q.target);
+      this.scene.add(qLight);
+      this.scene.add(qLight.target);
+      this.quadrantSpotLights.push(qLight);
+    });
+
+    /* celestial & atmosphere (3D Sun, Moon, Starfield) */
+    this.celestial = createCelestialSystem(this.scene);
 
     /* weather & environment */
     this.weatherParticles = createWeatherParticles(this.scene);
@@ -251,6 +280,9 @@ export class LudoScene {
     const elapsedTime = this.clock.getElapsedTime();
 
     this.forest.update(elapsedTime);
+
+    this.celestial?.update(elapsedTime, this.camera);
+    this.board?.update?.(elapsedTime);
 
     this.effects.update(delta);
 
@@ -876,17 +908,20 @@ export class LudoScene {
     const isMobile = window.innerWidth < 768;
 
     // Target colors
-    const targetSky = new THREE.Color(weather.skyColor).multiplyScalar(
-      time.skyTint
-    );
-    const targetFog = new THREE.Color(weather.fogColor).multiplyScalar(
-      time.skyTint
-    );
-    const targetAmbientCol = new THREE.Color(weather.ambientColor);
-    const targetSunCol = new THREE.Color(weather.sunColor);
-    const targetHemiSky = new THREE.Color(weather.hemiSky).multiplyScalar(
-      time.skyTint
-    );
+    const skyHex =
+      time.skyColorOverride?.[weatherId] ||
+      time.skyColorOverride?.clear ||
+      weather.skyColor;
+    const fogHex =
+      time.fogColorOverride?.[weatherId] ||
+      time.fogColorOverride?.clear ||
+      weather.fogColor;
+
+    const targetSky = new THREE.Color(skyHex);
+    const targetFog = new THREE.Color(fogHex);
+    const targetSunCol = new THREE.Color(time.sunColor || weather.sunColor);
+    const targetAmbientCol = new THREE.Color(time.ambientColor || weather.ambientColor);
+    const targetHemiSky = new THREE.Color(skyHex);
     const targetHemiGround = new THREE.Color(weather.hemiGround);
     const targetFillCol = new THREE.Color(weather.fillColor);
     const targetBounceCol = new THREE.Color(weather.bounceColor);
@@ -912,6 +947,11 @@ export class LudoScene {
     const [targetSunX, targetSunY, targetSunZ] = time.sunPosition;
     const dur = animated ? 0.85 : 0;
     const ease = "power2.out";
+
+    const isNight = timeId === "night" || timeId === "dark_night";
+    const targetBoardSpotIntensity = isNight ? (timeId === "dark_night" ? 4.8 : 3.4) : 0.0;
+    const targetQuadSpotIntensity = isNight ? (timeId === "dark_night" ? 2.2 : 1.6) : 0.0;
+    const targetSpotCol = new THREE.Color(timeId === "dark_night" ? "#ffffff" : "#f1f5f9");
 
     if (!animated) {
       if (this.scene.fog) {
@@ -942,9 +982,21 @@ export class LudoScene {
         this.bounceLight.color.copy(targetBounceCol);
         this.bounceLight.intensity = targetBounceIntensity;
       }
+      if (this.boardSpotLight) {
+        this.boardSpotLight.color.copy(targetSpotCol);
+        this.boardSpotLight.intensity = targetBoardSpotIntensity;
+      }
+      this.quadrantSpotLights?.forEach((ql) => {
+        ql.color.copy(targetSpotCol);
+        ql.intensity = targetQuadSpotIntensity;
+      });
+
       this.weatherParticles?.setWeatherMode(weatherId);
+      this.celestial?.setTimeOfDay(timeId, weatherId, false);
       this.forest?.setTheme(weatherId, false);
+      this.forest?.setTimeOfDay?.(timeId, false);
       this.board?.setTheme?.(weatherId, false);
+      this.board?.setNightGlow?.(isNight, weatherId, false);
       setAmbientMode(weatherId);
       return;
     }
@@ -1067,9 +1119,42 @@ export class LudoScene {
       });
     }
 
+    if (this.boardSpotLight) {
+      gsap.to(this.boardSpotLight.color, {
+        r: targetSpotCol.r,
+        g: targetSpotCol.g,
+        b: targetSpotCol.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(this.boardSpotLight, {
+        intensity: targetBoardSpotIntensity,
+        duration: dur,
+        ease,
+      });
+    }
+
+    this.quadrantSpotLights?.forEach((ql) => {
+      gsap.to(ql.color, {
+        r: targetSpotCol.r,
+        g: targetSpotCol.g,
+        b: targetSpotCol.b,
+        duration: dur,
+        ease,
+      });
+      gsap.to(ql, {
+        intensity: targetQuadSpotIntensity,
+        duration: dur,
+        ease,
+      });
+    });
+
     this.weatherParticles?.setWeatherMode(weatherId);
+    this.celestial?.setTimeOfDay(timeId, weatherId, true);
     this.forest?.setTheme(weatherId, true);
+    this.forest?.setTimeOfDay?.(timeId, true);
     this.board?.setTheme?.(weatherId, true);
+    this.board?.setNightGlow?.(isNight, weatherId, true);
     setAmbientMode(weatherId);
   }
 
@@ -1099,6 +1184,7 @@ export class LudoScene {
     );
     window.removeEventListener("resize", this.onResize);
 
+    this.celestial?.dispose();
     this.weatherParticles?.dispose();
     this.effects?.dispose();
     this.rig.dispose();

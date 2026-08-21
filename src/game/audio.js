@@ -285,6 +285,8 @@ let currentAmbientNodes = [];
 let ambientTimerId = null;
 let brownNoiseBuffer = null;
 let rainDropBuffer = null;
+let waterStreamBuffer = null;
+let waterPlopBuffer = null;
 let fireCrackleBuffer = null;
 
 /** Generates smooth natural Brownian noise (soft, warm analog sound without harsh hiss) */
@@ -306,28 +308,95 @@ function getBrownNoiseBuffer(ctx) {
   return buffer;
 }
 
-/** Generates realistic organic rain droplet impacts */
+/** Generates realistic soft, soothing organic rain droplet impacts */
 function getRainDropBuffer(ctx) {
   if (rainDropBuffer) return rainDropBuffer;
   const sampleRate = ctx.sampleRate;
-  const bufferSize = sampleRate * 3;
+  const bufferSize = sampleRate * 4;
   const buffer = ctx.createBuffer(2, bufferSize, sampleRate);
   for (let channel = 0; channel < 2; channel++) {
     const data = buffer.getChannelData(channel);
     for (let i = 0; i < bufferSize; i++) {
-      // Randomized droplet micro-taps
-      if (Math.random() < 0.0035) {
-        const dropLen = Math.floor(sampleRate * (0.003 + Math.random() * 0.008));
-        const freq = 1200 + Math.random() * 2400;
-        const decay = 0.002 + Math.random() * 0.006;
+      // Gentle, sparse organic rain pitter-patter
+      if (Math.random() < 0.0012) {
+        const dropLen = Math.floor(sampleRate * (0.006 + Math.random() * 0.012));
+        const freq = 380 + Math.random() * 450;
+        const decay = 0.006 + Math.random() * 0.01;
         for (let j = 0; j < dropLen && i + j < bufferSize; j++) {
           const t = j / sampleRate;
-          data[i + j] += Math.sin(2 * Math.PI * freq * t) * Math.exp(-t / decay) * (0.15 + Math.random() * 0.25);
+          data[i + j] += Math.sin(2 * Math.PI * freq * t) * Math.exp(-t / decay) * (0.035 + Math.random() * 0.045);
         }
       }
     }
   }
   rainDropBuffer = buffer;
+  return buffer;
+}
+
+/** Generates realistic organic trickling water brook / flowing liquid water texture */
+function getWaterStreamBuffer(ctx) {
+  if (waterStreamBuffer) return waterStreamBuffer;
+  const sampleRate = ctx.sampleRate;
+  const bufferSize = sampleRate * 4;
+  const buffer = ctx.createBuffer(2, bufferSize, sampleRate);
+
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    let b0 = 0, b1 = 0, b2 = 0;
+
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.96 * b0 + white * 0.04;
+      b1 = 0.94 * b1 + b0 * 0.06;
+      b2 = 0.92 * b2 + b1 * 0.08;
+
+      // Micro liquid ripples & bubbles
+      if (Math.random() < 0.0025) {
+        const freq = 280 + Math.random() * 260;
+        const bLen = Math.floor(sampleRate * (0.012 + Math.random() * 0.02));
+        for (let j = 0; j < bLen && i + j < bufferSize; j++) {
+          const t = j / sampleRate;
+          data[i + j] += Math.sin(2 * Math.PI * (freq + t * 350) * t) * Math.exp(-t / 0.01) * 0.035;
+        }
+      }
+
+      data[i] += b2 * 1.6;
+    }
+  }
+
+  waterStreamBuffer = buffer;
+  return buffer;
+}
+
+/** Generates resonant liquid water droplet plops / drips into pools of water */
+function getWaterPlopBuffer(ctx) {
+  if (waterPlopBuffer) return waterPlopBuffer;
+  const sampleRate = ctx.sampleRate;
+  const bufferSize = sampleRate * 4;
+  const buffer = ctx.createBuffer(2, bufferSize, sampleRate);
+
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    for (let i = 0; i < bufferSize; i++) {
+      // Natural water plop: sine tone with upward pitch curve & liquid envelope
+      if (Math.random() < 0.0016) {
+        const baseFreq = 400 + Math.random() * 450;
+        const riseFreq = baseFreq + 220 + Math.random() * 280;
+        const plopLen = Math.floor(sampleRate * (0.022 + Math.random() * 0.03));
+        const amp = 0.06 + Math.random() * 0.06;
+
+        for (let j = 0; j < plopLen && i + j < bufferSize; j++) {
+          const t = j / sampleRate;
+          const prog = j / plopLen;
+          const currentFreq = baseFreq + (riseFreq - baseFreq) * Math.sqrt(prog);
+          const env = Math.sin(Math.PI * Math.min(1, prog * 3.5)) * Math.exp(-prog * 4.2);
+          data[i + j] += Math.sin(2 * Math.PI * currentFreq * t) * env * amp;
+        }
+      }
+    }
+  }
+
+  waterPlopBuffer = buffer;
   return buffer;
 }
 
@@ -418,7 +487,7 @@ export function setAmbientMode(modeId = "clear") {
 
   if (!ambientMasterGain) {
     ambientMasterGain = ctx.createGain();
-    ambientMasterGain.gain.setValueAtTime((muted || ambientMuted) ? 0 : 0.4, ctx.currentTime);
+    ambientMasterGain.gain.setValueAtTime((muted || ambientMuted) ? 0 : 0.32, ctx.currentTime);
     ambientMasterGain.connect(ctx.destination);
   }
 
@@ -428,21 +497,77 @@ export function setAmbientMode(modeId = "clear") {
   const brownNoise = getBrownNoiseBuffer(ctx);
 
   if (modeId === "heavy_rain") {
-    // 1. Soft Natural Rainfall Bed (Warm diffused water sound, no harsh static)
+    // 1. Soothing Flowing Liquid Water Stream / Brook Bed
+    const waterSrc = ctx.createBufferSource();
+    waterSrc.buffer = getWaterStreamBuffer(ctx);
+    waterSrc.loop = true;
+
+    const waterFilter = ctx.createBiquadFilter();
+    waterFilter.type = "bandpass";
+    waterFilter.frequency.setValueAtTime(380, now);
+    waterFilter.Q.setValueAtTime(1.1, now);
+
+    const waterGain = ctx.createGain();
+    waterGain.gain.setValueAtTime(0.14, now);
+
+    waterSrc.connect(waterFilter);
+    waterFilter.connect(waterGain);
+    waterGain.connect(ambientMasterGain);
+    waterSrc.start(now);
+    currentAmbientNodes.push(waterSrc, waterFilter, waterGain);
+
+    // 2. Resonant Liquid Water Droplet "Plops" & Puddle Drips
+    const plopSrc = ctx.createBufferSource();
+    plopSrc.buffer = getWaterPlopBuffer(ctx);
+    plopSrc.loop = true;
+
+    const plopFilter = ctx.createBiquadFilter();
+    plopFilter.type = "bandpass";
+    plopFilter.frequency.setValueAtTime(850, now);
+    plopFilter.Q.setValueAtTime(1.2, now);
+
+    const plopGain = ctx.createGain();
+    plopGain.gain.setValueAtTime(0.13, now);
+
+    plopSrc.connect(plopFilter);
+    plopFilter.connect(plopGain);
+    plopGain.connect(ambientMasterGain);
+    plopSrc.start(now);
+    currentAmbientNodes.push(plopSrc, plopFilter, plopGain);
+
+    // 3. Gentle Soft Rain Pitter-Patter
+    const dropSrc = ctx.createBufferSource();
+    dropSrc.buffer = getRainDropBuffer(ctx);
+    dropSrc.loop = true;
+
+    const dropFilter = ctx.createBiquadFilter();
+    dropFilter.type = "lowpass";
+    dropFilter.frequency.setValueAtTime(950, now);
+
+    const dropGain = ctx.createGain();
+    dropGain.gain.setValueAtTime(0.06, now);
+
+    dropSrc.connect(dropFilter);
+    dropFilter.connect(dropGain);
+    dropGain.connect(ambientMasterGain);
+    dropSrc.start(now);
+    currentAmbientNodes.push(dropSrc, dropFilter, dropGain);
+
+    // 4. Soft, Cozy Background Rain Haze Bed
     const rainSrc = ctx.createBufferSource();
     rainSrc.buffer = brownNoise;
     rainSrc.loop = true;
 
     const rainLowpass = ctx.createBiquadFilter();
     rainLowpass.type = "lowpass";
-    rainLowpass.frequency.setValueAtTime(1600, now);
+    rainLowpass.frequency.setValueAtTime(680, now);
 
     const rainHighpass = ctx.createBiquadFilter();
     rainHighpass.type = "highpass";
-    rainHighpass.frequency.setValueAtTime(320, now);
+    rainHighpass.frequency.setValueAtTime(120, now);
 
     const rainGain = ctx.createGain();
-    rainGain.gain.setValueAtTime(0.35, now);
+    rainGain.gain.setValueAtTime(0.09, now);
 
     rainSrc.connect(rainLowpass);
     rainLowpass.connect(rainHighpass);
@@ -451,44 +576,25 @@ export function setAmbientMode(modeId = "clear") {
     rainSrc.start(now);
     currentAmbientNodes.push(rainSrc, rainLowpass, rainHighpass, rainGain);
 
-    // 2. Individual Natural Water Droplets & Surface Patter
-    const dropSrc = ctx.createBufferSource();
-    dropSrc.buffer = getRainDropBuffer(ctx);
-    dropSrc.loop = true;
-
-    const dropFilter = ctx.createBiquadFilter();
-    dropFilter.type = "bandpass";
-    dropFilter.frequency.setValueAtTime(2200, now);
-    dropFilter.Q.setValueAtTime(1.2, now);
-
-    const dropGain = ctx.createGain();
-    dropGain.gain.setValueAtTime(0.28, now);
-
-    dropSrc.connect(dropFilter);
-    dropFilter.connect(dropGain);
-    dropGain.connect(ambientMasterGain);
-    dropSrc.start(now);
-    currentAmbientNodes.push(dropSrc, dropFilter, dropGain);
-
-    // 3. Deep Natural Ocean Wave Swells
+    // 5. Very Soft, Distant Ocean Wave Swells
     const waveSrc = ctx.createBufferSource();
     waveSrc.buffer = brownNoise;
     waveSrc.loop = true;
 
     const waveFilter = ctx.createBiquadFilter();
     waveFilter.type = "lowpass";
-    waveFilter.frequency.setValueAtTime(180, now);
+    waveFilter.frequency.setValueAtTime(110, now);
 
     const waveLfo = ctx.createOscillator();
-    waveLfo.frequency.setValueAtTime(0.09, now); // ~11 sec natural tide
+    waveLfo.frequency.setValueAtTime(0.07, now); // ~14 sec natural calm tide
     const waveLfoGain = ctx.createGain();
-    waveLfoGain.gain.setValueAtTime(140, now);
+    waveLfoGain.gain.setValueAtTime(40, now);
     waveLfo.connect(waveLfoGain);
     waveLfoGain.connect(waveFilter.frequency);
     waveLfo.start(now);
 
     const waveGain = ctx.createGain();
-    waveGain.gain.setValueAtTime(0.45, now);
+    waveGain.gain.setValueAtTime(0.07, now);
 
     waveSrc.connect(waveFilter);
     waveFilter.connect(waveGain);
@@ -497,26 +603,26 @@ export function setAmbientMode(modeId = "clear") {
     currentAmbientNodes.push(waveSrc, waveFilter, waveLfo, waveLfoGain, waveGain);
 
   } else if (modeId === "desert") {
-    // Natural Desert Canyon Winds: Low warm drafts + sweeping natural gusts
+    // Natural Desert Canyon Winds: Gentle warm breeze
     const windSrc = ctx.createBufferSource();
     windSrc.buffer = brownNoise;
     windSrc.loop = true;
 
     const windFilter = ctx.createBiquadFilter();
     windFilter.type = "bandpass";
-    windFilter.frequency.setValueAtTime(380, now);
-    windFilter.Q.setValueAtTime(2.2, now);
+    windFilter.frequency.setValueAtTime(240, now);
+    windFilter.Q.setValueAtTime(1.4, now);
 
     const windLfo = ctx.createOscillator();
-    windLfo.frequency.setValueAtTime(0.16, now); // Slow wind surges
+    windLfo.frequency.setValueAtTime(0.12, now);
     const windLfoGain = ctx.createGain();
-    windLfoGain.gain.setValueAtTime(240, now);
+    windLfoGain.gain.setValueAtTime(120, now);
     windLfo.connect(windLfoGain);
     windLfoGain.connect(windFilter.frequency);
     windLfo.start(now);
 
     const windGain = ctx.createGain();
-    windGain.gain.setValueAtTime(0.42, now);
+    windGain.gain.setValueAtTime(0.14, now);
 
     windSrc.connect(windFilter);
     windFilter.connect(windGain);
@@ -531,10 +637,10 @@ export function setAmbientMode(modeId = "clear") {
 
     const draftFilter = ctx.createBiquadFilter();
     draftFilter.type = "lowpass";
-    draftFilter.frequency.setValueAtTime(190, now);
+    draftFilter.frequency.setValueAtTime(150, now);
 
     const draftGain = ctx.createGain();
-    draftGain.gain.setValueAtTime(0.3, now);
+    draftGain.gain.setValueAtTime(0.08, now);
 
     draftSrc.connect(draftFilter);
     draftFilter.connect(draftGain);
@@ -543,17 +649,17 @@ export function setAmbientMode(modeId = "clear") {
     currentAmbientNodes.push(draftSrc, draftFilter, draftGain);
 
   } else if (modeId === "hell") {
-    // Underworld Warm Furnace Roar & Magma Swell
+    // Underworld Warm Gentle Magma Swell
     const magmaSrc = ctx.createBufferSource();
     magmaSrc.buffer = brownNoise;
     magmaSrc.loop = true;
 
     const magmaFilter = ctx.createBiquadFilter();
     magmaFilter.type = "lowpass";
-    magmaFilter.frequency.setValueAtTime(140, now);
+    magmaFilter.frequency.setValueAtTime(120, now);
 
     const magmaGain = ctx.createGain();
-    magmaGain.gain.setValueAtTime(0.55, now);
+    magmaGain.gain.setValueAtTime(0.16, now);
 
     magmaSrc.connect(magmaFilter);
     magmaFilter.connect(magmaGain);
@@ -561,18 +667,18 @@ export function setAmbientMode(modeId = "clear") {
     magmaSrc.start(now);
     currentAmbientNodes.push(magmaSrc, magmaFilter, magmaGain);
 
-    // Natural Organic Fire Crackle & Pops
+    // Natural Soft Wood/Lava Crackle
     const crackleSrc = ctx.createBufferSource();
     crackleSrc.buffer = getFireCrackleBuffer(ctx);
     crackleSrc.loop = true;
 
     const crackleFilter = ctx.createBiquadFilter();
     crackleFilter.type = "bandpass";
-    crackleFilter.frequency.setValueAtTime(1200, now);
-    crackleFilter.Q.setValueAtTime(1.0, now);
+    crackleFilter.frequency.setValueAtTime(900, now);
+    crackleFilter.Q.setValueAtTime(0.8, now);
 
     const crackleGain = ctx.createGain();
-    crackleGain.gain.setValueAtTime(0.24, now);
+    crackleGain.gain.setValueAtTime(0.06, now);
 
     crackleSrc.connect(crackleFilter);
     crackleFilter.connect(crackleGain);
@@ -581,26 +687,26 @@ export function setAmbientMode(modeId = "clear") {
     currentAmbientNodes.push(crackleSrc, crackleFilter, crackleGain);
 
   } else if (modeId === "ice") {
-    // Natural Glacial Wind: Deep arctic tundra breeze
+    // Natural Glacial Wind: Peaceful calm arctic breeze
     const iceSrc = ctx.createBufferSource();
     iceSrc.buffer = brownNoise;
     iceSrc.loop = true;
 
     const iceFilter = ctx.createBiquadFilter();
     iceFilter.type = "bandpass";
-    iceFilter.frequency.setValueAtTime(520, now);
-    iceFilter.Q.setValueAtTime(2.8, now);
+    iceFilter.frequency.setValueAtTime(280, now);
+    iceFilter.Q.setValueAtTime(1.5, now);
 
     const iceLfo = ctx.createOscillator();
-    iceLfo.frequency.setValueAtTime(0.18, now);
+    iceLfo.frequency.setValueAtTime(0.12, now);
     const iceLfoGain = ctx.createGain();
-    iceLfoGain.gain.setValueAtTime(260, now);
+    iceLfoGain.gain.setValueAtTime(120, now);
     iceLfo.connect(iceLfoGain);
     iceLfoGain.connect(iceFilter.frequency);
     iceLfo.start(now);
 
     const iceGain = ctx.createGain();
-    iceGain.gain.setValueAtTime(0.38, now);
+    iceGain.gain.setValueAtTime(0.13, now);
 
     iceSrc.connect(iceFilter);
     iceFilter.connect(iceGain);
@@ -608,15 +714,15 @@ export function setAmbientMode(modeId = "clear") {
     iceSrc.start(now);
     currentAmbientNodes.push(iceSrc, iceFilter, iceLfo, iceLfoGain, iceGain);
 
-    // Deep sub-ice resonance
+    // Deep soft sub-ice resonance
     const subIceSrc = ctx.createBufferSource();
     subIceSrc.buffer = brownNoise;
     subIceSrc.loop = true;
     const subIceFilter = ctx.createBiquadFilter();
     subIceFilter.type = "lowpass";
-    subIceFilter.frequency.setValueAtTime(160, now);
+    subIceFilter.frequency.setValueAtTime(130, now);
     const subIceGain = ctx.createGain();
-    subIceGain.gain.setValueAtTime(0.25, now);
+    subIceGain.gain.setValueAtTime(0.08, now);
 
     subIceSrc.connect(subIceFilter);
     subIceFilter.connect(subIceGain);

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const LOADING_STEPS = [
   "Awakening the mystical forest...",
@@ -13,6 +15,98 @@ export function Preloader({ isReady, onComplete }) {
   const [progress, setProgress] = useState(0);
   const [statusIndex, setStatusIndex] = useState(0);
   const [isDone, setIsDone] = useState(false);
+  const canvasContainerRef = useRef(null);
+
+  // 3D Dice GLB Preview
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const width = 140;
+    const height = 140;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 0, 3.2);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfff5ea, 2.2);
+    dirLight.position.set(3, 4, 3);
+    scene.add(dirLight);
+
+    const fillLight = new THREE.PointLight(0x60a5fa, 1.5, 10);
+    fillLight.position.set(-2, -1, 2);
+    scene.add(fillLight);
+
+    let diceModel = null;
+    let animId = null;
+    const loader = new GLTFLoader();
+
+    loader.load(
+      "/modal/dice.glb",
+      (gltf) => {
+        diceModel = gltf.scene;
+
+        // Auto-center and fit to bounding sphere
+        const box = new THREE.Box3().setFromObject(diceModel);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+
+        diceModel.position.sub(center);
+        const scaleFactor = 1.6 / (maxDim || 1);
+        diceModel.scale.setScalar(scaleFactor);
+
+        diceModel.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        scene.add(diceModel);
+      },
+      undefined,
+      (err) => {
+        console.warn("Could not load dice.glb for preloader, falling back", err);
+      }
+    );
+
+    let startTime = performance.now();
+    const animate = (now) => {
+      animId = requestAnimationFrame(animate);
+      const elapsed = (now - startTime) * 0.001;
+
+      if (diceModel) {
+        diceModel.rotation.x = elapsed * 1.8 + Math.sin(elapsed * 0.8) * 0.4;
+        diceModel.rotation.y = elapsed * 2.2 + Math.cos(elapsed * 0.9) * 0.4;
+        diceModel.rotation.z = elapsed * 1.2;
+        diceModel.position.y = Math.sin(elapsed * 2.5) * 0.12;
+      }
+
+      renderer.render(scene, camera);
+    };
+
+    animId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+      if (renderer.domElement && container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
+      renderer.dispose();
+    };
+  }, []);
 
   useEffect(() => {
     const startTime = Date.now();
@@ -66,55 +160,9 @@ export function Preloader({ isReady, onComplete }) {
           <div className="preloader-logo-shimmer" />
         </div>
 
-        {/* 3D Tumbling Modal Dice Scene */}
-        <div className="preloader-dice-stage">
-          <div className="preloader-dice-shadow" />
-          <div className="preloader-dice-cube">
-            {/* Face 1: Front */}
-            <div className="dice-face face-front">
-              <span className="dice-pip center red-pip" />
-            </div>
-
-            {/* Face 2: Top */}
-            <div className="dice-face face-top">
-              <span className="dice-pip top-left green-pip" />
-              <span className="dice-pip bottom-right green-pip" />
-            </div>
-
-            {/* Face 3: Right */}
-            <div className="dice-face face-right">
-              <span className="dice-pip top-left yellow-pip" />
-              <span className="dice-pip center yellow-pip" />
-              <span className="dice-pip bottom-right yellow-pip" />
-            </div>
-
-            {/* Face 4: Left */}
-            <div className="dice-face face-left">
-              <span className="dice-pip top-left blue-pip" />
-              <span className="dice-pip top-right blue-pip" />
-              <span className="dice-pip bottom-left blue-pip" />
-              <span className="dice-pip bottom-right blue-pip" />
-            </div>
-
-            {/* Face 5: Bottom */}
-            <div className="dice-face face-bottom">
-              <span className="dice-pip top-left" />
-              <span className="dice-pip top-right" />
-              <span className="dice-pip center" />
-              <span className="dice-pip bottom-left" />
-              <span className="dice-pip bottom-right" />
-            </div>
-
-            {/* Face 6: Back */}
-            <div className="dice-face face-back">
-              <span className="dice-pip top-left red-pip" />
-              <span className="dice-pip top-right red-pip" />
-              <span className="dice-pip mid-left red-pip" />
-              <span className="dice-pip mid-right red-pip" />
-              <span className="dice-pip bottom-left red-pip" />
-              <span className="dice-pip bottom-right red-pip" />
-            </div>
-          </div>
+        {/* 3D Model Dice Stage */}
+        <div className="preloader-3d-dice-stage" ref={canvasContainerRef}>
+          <div className="preloader-dice-shadow-soft" />
         </div>
 
         {/* Loading Information & Elastic Progress Bar */}

@@ -45,6 +45,11 @@ function loadSavedState() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.state && Array.isArray(parsed.state.tokens)) {
+      // If the game was already won or completed, do not restore it — start a clean fresh game!
+      if (parsed.status === "over" || parsed.state.winner) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
       if (parsed.status === "rolling" || parsed.status === "moving") {
         parsed.status = "idle";
         parsed.dice = null;
@@ -87,7 +92,12 @@ export function useLudoGame(sceneRef, ready, onlineState = null) {
     if (alive.current) {
       setView({ ...machine.current });
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(machine.current));
+        // If match has concluded with a winner, clear storage so new sessions open a fresh game
+        if (machine.current.status === "over" || machine.current.state?.winner) {
+          localStorage.removeItem(STORAGE_KEY);
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(machine.current));
+        }
       } catch (e) {
         console.error("Failed to save Ludo state:", e);
       }

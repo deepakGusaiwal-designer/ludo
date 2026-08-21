@@ -131,7 +131,7 @@ body {
 
 .hud-title {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #ffe0a3;
@@ -140,7 +140,7 @@ body {
 
 .online-room-badge {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: #38bdf8;
   background: rgba(56, 189, 248, 0.16);
   padding: 4px 10px;
@@ -173,7 +173,7 @@ body {
   padding: 8px 18px;
   border-radius: 999px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.35);
   animation: fadeIn 0.3s ease-out;
   pointer-events: none;
@@ -195,7 +195,7 @@ body {
   padding: 9px 14px;
   font-family: inherit;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: #ffffff;
   background: linear-gradient(
     135deg,
@@ -230,7 +230,7 @@ body {
 
 .hud-btn-text {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
@@ -652,7 +652,7 @@ body {
   border: 1.5px solid rgba(255, 255, 255, 0.2);
   color: #cbd5e1;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -946,7 +946,7 @@ body {
 
 .apple-slider-value {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: #ffffff;
   background: rgba(242, 181, 68, 0.2);
   border: 1px solid rgba(242, 181, 68, 0.4);
@@ -1013,7 +1013,7 @@ body {
 
 .apple-slider-indicator-text {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   color: #1a1204;
   letter-spacing: 0.02em;
 }
@@ -1053,7 +1053,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #ffdb8a;
@@ -1252,7 +1252,7 @@ body {
   color: #ffffff;
   font-family: inherit;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1273,7 +1273,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .gsap-select-arrow {
@@ -1327,7 +1327,7 @@ body {
 .gsap-select-item.active {
   background: rgba(242, 181, 68, 0.3);
   color: #f2b544;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .gsap-select-check {
@@ -1358,7 +1358,7 @@ body {
   padding: 13px 0;
   font: inherit;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.03em;
   border-radius: 14px;
   cursor: pointer;
@@ -1457,7 +1457,7 @@ body {
   border-radius: 14px;
   font-family: inherit;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.03em;
   cursor: pointer;
   display: inline-flex;
@@ -1660,7 +1660,7 @@ body {
 
 .lobby-preset-title {
   font-size: 13.5px;
-  font-weight: 800;
+  font-weight: 700;
   color: #ffffff;
 }
 
@@ -1687,7 +1687,7 @@ body {
 
 .lobby-section-title {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--gold-light);
@@ -1831,7 +1831,7 @@ body {
   font-size: 13px !important;
 }
 
-@media (max-width: 580px) {
+@media (max-width: 767px) {
   .lobby-card {
     max-width: 96vw;
     padding: 18px 14px;
@@ -2004,6 +2004,7 @@ body {
   align-items: center;
   justify-content: center;
   position: relative;
+  flex-shrink: 0;
 }
 
 .gsap-radio-dot {
@@ -2030,7 +2031,7 @@ body {
 
 .gsap-checkbox-mark {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: #f2b544;
   text-shadow: 0 0 6px rgba(242, 181, 68, 0.6);
   opacity: 0;
@@ -2086,7 +2087,7 @@ body {
 
 .overlay-title {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
@@ -2243,7 +2244,7 @@ body {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .glass-modal-card {
     padding: 24px 20px;
     width: 95%;
@@ -2377,7 +2378,7 @@ body {
 
 .badge-room-label {
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 700;
   color: #94a3b8;
   letter-spacing: 0.06em;
 }
@@ -2385,7 +2386,7 @@ body {
 .badge-room-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: #38bdf8;
   letter-spacing: 0.08em;
 }
@@ -2501,110 +2502,38 @@ body {
   100% { transform: translateY(-4px); }
 }
 
-/* 3D Dice Stage */
-.preloader-dice-stage {
+/* 3D Model Dice Stage */
+.preloader-3d-dice-stage {
   position: relative;
   width: 140px;
   height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 900px;
 }
 
-.preloader-dice-shadow {
+.preloader-3d-dice-stage canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.preloader-dice-shadow-soft {
   position: absolute;
   bottom: 8px;
-  width: 70px;
-  height: 16px;
+  width: 64px;
+  height: 14px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  filter: blur(8px);
-  animation: diceShadowBounce 1.8s ease-in-out infinite alternate;
+  background: rgba(0, 0, 0, 0.55);
+  filter: blur(7px);
+  animation: diceShadowBounceSoft 2.5s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 
-.preloader-dice-cube {
-  position: relative;
-  width: 68px;
-  height: 68px;
-  transform-style: preserve-3d;
-  animation: diceTumble 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+@keyframes diceShadowBounceSoft {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(0.72); opacity: 0.25; }
 }
-
-@keyframes diceTumble {
-  0% {
-    transform: translateY(0) rotateX(15deg) rotateY(25deg) rotateZ(0deg);
-  }
-  25% {
-    transform: translateY(-24px) rotateX(115deg) rotateY(135deg) rotateZ(45deg);
-  }
-  50% {
-    transform: translateY(0) rotateX(205deg) rotateY(225deg) rotateZ(90deg);
-  }
-  75% {
-    transform: translateY(-24px) rotateX(295deg) rotateY(315deg) rotateZ(135deg);
-  }
-  100% {
-    transform: translateY(0) rotateX(375deg) rotateY(385deg) rotateZ(360deg);
-  }
-}
-
-@keyframes diceShadowBounce {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(0.65); opacity: 0.25; }
-}
-
-/* Dice Faces */
-.dice-face {
-  position: absolute;
-  width: 68px;
-  height: 68px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(235, 240, 245, 0.92) 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.85);
-  border-radius: 16px;
-  box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.9),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.18),
-    0 4px 12px rgba(0, 0, 0, 0.35);
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  padding: 8px;
-  box-sizing: border-box;
-}
-
-.face-front  { transform: translateZ(34px); }
-.face-back   { transform: rotateY(180deg) translateZ(34px); }
-.face-right  { transform: rotateY(90deg) translateZ(34px); }
-.face-left   { transform: rotateY(-90deg) translateZ(34px); }
-.face-top    { transform: rotateX(90deg) translateZ(34px); }
-.face-bottom { transform: rotateX(-90deg) translateZ(34px); }
-
-/* Pips */
-.dice-pip {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #1e293b;
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.8),
-    0 1px 1px rgba(255, 255, 255, 0.8);
-  justify-self: center;
-  align-self: center;
-}
-
-.red-pip    { background: #ef4444; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 0 6px rgba(239, 68, 68, 0.5); }
-.green-pip  { background: #10b981; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 0 6px rgba(16, 185, 129, 0.5); }
-.yellow-pip { background: #f59e0b; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 0 6px rgba(245, 158, 11, 0.5); }
-.blue-pip   { background: #3b82f6; box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 0 6px rgba(59, 130, 246, 0.5); }
-
-.top-left     { grid-column: 1; grid-row: 1; }
-.top-right    { grid-column: 3; grid-row: 1; }
-.mid-left     { grid-column: 1; grid-row: 2; }
-.center       { grid-column: 2; grid-row: 2; }
-.mid-right    { grid-column: 3; grid-row: 2; }
-.bottom-left  { grid-column: 1; grid-row: 3; }
-.bottom-right { grid-column: 3; grid-row: 3; }
 
 /* Preloader Info & Progress Bar */
 .preloader-info {
@@ -2771,7 +2700,7 @@ body {
   pointer-events: auto;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .hud {
     top: max(10px, env(safe-area-inset-top));
     left: max(10px, env(safe-area-inset-left));
@@ -2846,5 +2775,9 @@ body {
     padding: 8px 12px;
     font-size: 12px;
   }
+  .glass-surface-btn {
+    padding: 13px 0px;
+    font-weight: 700;
+  }
 }
-
+
