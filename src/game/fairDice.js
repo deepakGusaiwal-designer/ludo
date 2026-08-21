@@ -24,7 +24,10 @@ const diceBags = {
 };
 
 function fillAndShuffleBag(color) {
-  // Balanced set of outcomes: [1, 2, 3, 4, 5, 6, 6] (giving slightly boosted 6 chance)
+  // Exactly two of each face (1-6), shuffled — a standard "bag"
+  // randomizer. Every face is equally likely over a full bag, it
+  // just avoids the long same-number streaks pure independent
+  // rolls can produce, without ever biasing the actual odds.
   const set = [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6];
   for (let i = set.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
