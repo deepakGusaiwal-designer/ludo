@@ -20,9 +20,9 @@ export function AmbientToggle() {
       aria-label={ambientMuted ? "Play Ambient Realm Sounds" : "Mute Ambient Realm Sounds"}
     >
       {ambientMuted ? (
-        <HeadphoneMuteIcon size={18} />
+        <HeadphoneMuteIcon size={17} />
       ) : (
-        <MusicNote03Icon size={18} />
+        <MusicNote03Icon size={17} />
       )}
       <span className="hud-btn-text">Ambient</span>
     </button>

@@ -46,10 +46,10 @@ export function CameraControls({ sceneRef }) {
         onClick={() => setIsOpen(!isOpen)}
         title={`Camera View: ${activeLabel}`}
       >
-        <Camera01Icon className="hud-icon" size={18} />
+        <Camera01Icon className="hud-icon" size={17} />
         <span className="hud-btn-text">{activeAngle.toUpperCase()}</span>
         <ArrowDown01Icon
-          size={14}
+          size={13}
           className={`dropdown-arrow ${isOpen ? "open" : ""}`}
         />
       </button>

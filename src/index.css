@@ -347,7 +347,7 @@ body {
   z-index: 35;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7.5px;
   pointer-events: auto;
 }
 
@@ -358,8 +358,72 @@ body {
   z-index: 35;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7.5px;
   pointer-events: auto;
+}
+
+.hud-corner-left .icon-hud-btn,
+.hud-corner-right .icon-hud-btn {
+  padding: 8.5px 13px;
+  gap: 6.5px;
+  font-size: 11.5px;
+}
+
+.hud-corner-left .icon-hud-btn svg,
+.hud-corner-right .icon-hud-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.hud-corner-left .hud-btn-text,
+.hud-corner-right .hud-btn-text {
+  font-size: 11.5px;
+}
+
+/* Immersive Mode (Hide All UI) */
+.hud,
+.hud-corner-left {
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud.ui-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(-20px);
+}
+
+.hud-corner-left.ui-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(20px);
+}
+
+.ui-toggle-btn {
+  z-index: 40;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ui-toggle-btn.is-hidden-mode {
+  background: linear-gradient(
+    135deg,
+    rgba(52, 211, 153, 0.32) 0%,
+    rgba(16, 185, 129, 0.18) 100%
+  ),
+  rgba(10, 25, 18, 0.92);
+  border-color: rgba(52, 211, 153, 0.85);
+  color: #34d399;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.45), 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.ui-toggle-btn.is-hidden-mode:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(52, 211, 153, 0.48) 0%,
+    rgba(16, 185, 129, 0.3) 100%
+  ),
+  rgba(10, 25, 18, 0.95);
+  border-color: #34d399;
+  color: #ffffff;
 }
 
 /* Open camera and time dropdowns upwards when placed at the bottom */
@@ -372,7 +436,7 @@ body {
 }
 
 .dropdown-item-icon {
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 /* Top Turn Banner */
@@ -2188,10 +2252,10 @@ body {
 
   .hud-corner-left .icon-hud-btn,
   .hud-corner-right .icon-hud-btn {
-    width: 42px;
-    height: 42px;
-    min-width: 42px;
-    min-height: 42px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
     padding: 0;
     border-radius: 50%;
     display: flex;
@@ -2202,13 +2266,13 @@ body {
 
   .hud-corner-left .icon-hud-btn svg,
   .hud-corner-right .icon-hud-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 19px;
+    height: 19px;
   }
 
   .hud-corner-left .icon-hud-btn span,
   .hud-corner-right .icon-hud-btn span {
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1;
   }
 
@@ -2740,10 +2804,12 @@ body {
 
   .hud-corner-left .icon-hud-btn,
   .hud-corner-right .icon-hud-btn {
-    padding: 8px;
+    padding: 7.5px;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
     justify-content: center;
   }
 

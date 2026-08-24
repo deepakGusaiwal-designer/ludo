@@ -6,6 +6,8 @@ import {
   RefreshIcon,
   Settings02Icon,
   UserIcon,
+  ViewIcon,
+  ViewOffSlashIcon,
 } from "hugeicons-react";
 import { Toaster, toast } from "sonner";
 
@@ -41,6 +43,7 @@ export function LudoGame() {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
 
   const [isPreloaderDone, setIsPreloaderDone] = useState(false);
+  const [isUiHidden, setIsUiHidden] = useState(false);
 
   const onlineState = useOnlineLudo();
 
@@ -130,7 +133,7 @@ export function LudoGame() {
         }}
       />
 
-      <header className="hud">
+      <header className={`hud ${isUiHidden ? "ui-hidden" : ""}`}>
         <div className="hud-brand">
           <img src="/logo.png" alt="Ludo Logo" className="hud-logo" />
           {onlineState.room && (
@@ -145,8 +148,8 @@ export function LudoGame() {
           )}
         </div>
 
-        <h1 class="sr-only">3D Ludo Game by Deepak Gusaiwal - Play Online</h1>
-        <p class="sr-only">Play Ludo online with an interactive 3D board, animated dice and smooth gameplay.</p>
+        <h1 className="sr-only">3D Ludo Game by Deepak Gusaiwal - Play Online</h1>
+        <p className="sr-only">Play Ludo online with an interactive 3D board, animated dice and smooth gameplay.</p>
 
         <div className="hud-actions">
           <button
@@ -188,7 +191,7 @@ export function LudoGame() {
       </header>
 
       {/* Floating Bottom-Left Controls: Camera, Time of Day, Ambient & SFX Audio */}
-      <div className="hud-corner-left">
+      <div className={`hud-corner-left ${isUiHidden ? "ui-hidden" : ""}`}>
         <CameraControls sceneRef={sceneRef} />
         <TimeOfDayDropdown sceneRef={sceneRef} />
         <AmbientToggle />
@@ -197,23 +200,46 @@ export function LudoGame() {
 
       {/* Floating Bottom-Right Controls: Hero Pawn & Graphics (Single Room Badge in Header Only) */}
       <div className="hud-corner-right">
+        {!isUiHidden && (
+          <>
+            <button
+              type="button"
+              className="icon-hud-btn hero-hud-btn"
+              onClick={() => setIsCharacterModalOpen(true)}
+              title="Choose 3D Pawn Character"
+            >
+              <UserIcon size={17} />
+              <span className="hud-btn-text">Hero</span>
+            </button>
+            <button
+              type="button"
+              className="icon-hud-btn graphics-hud-btn"
+              onClick={() => setIsQualityModalOpen(true)}
+              title="3D Graphics Performance Settings"
+            >
+              <CpuIcon size={17} />
+              <span className="hud-btn-text">Graphics</span>
+            </button>
+          </>
+        )}
         <button
           type="button"
-          className="icon-hud-btn hero-hud-btn"
-          onClick={() => setIsCharacterModalOpen(true)}
-          title="Choose 3D Pawn Character"
+          className={`icon-hud-btn ui-toggle-btn ${isUiHidden ? "is-hidden-mode active" : ""}`}
+          onClick={() => {
+            setIsUiHidden((prev) => {
+              const next = !prev;
+              toast(next ? "UI Hidden (Immersive Mode)" : "UI Restored", {
+                duration: 1800,
+                id: "ui-toggle-toast",
+              });
+              return next;
+            });
+          }}
+          title={isUiHidden ? "Show All UI Elements" : "Hide All UI Elements (Immersive Mode)"}
+          aria-label={isUiHidden ? "Show All UI Elements" : "Hide All UI Elements"}
         >
-          <UserIcon size={18} />
-          <span className="hud-btn-text">Hero</span>
-        </button>
-        <button
-          type="button"
-          className="icon-hud-btn graphics-hud-btn"
-          onClick={() => setIsQualityModalOpen(true)}
-          title="3D Graphics Performance Settings"
-        >
-          <CpuIcon size={18} />
-          <span className="hud-btn-text">Graphics</span>
+          {isUiHidden ? <ViewOffSlashIcon size={17} /> : <ViewIcon size={17} />}
+          <span className="hud-btn-text">{isUiHidden ? "Show" : "Hide"}</span>
         </button>
       </div>
 

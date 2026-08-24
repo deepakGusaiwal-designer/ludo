@@ -41,12 +41,12 @@ export function TimeOfDayDropdown({ sceneRef }) {
         onClick={() => setIsOpen(!isOpen)}
         title={`Time of Day: ${currentPreset.name}`}
       >
-        <span style={{ fontSize: "17px", lineHeight: 1 }}>
+        <span style={{ fontSize: "16px", lineHeight: 1 }}>
           {currentPreset.emoji}
         </span>
         <span className="hud-btn-text">{currentPreset.badge}</span>
         <ArrowDown01Icon
-          size={14}
+          size={13}
           className={`dropdown-arrow ${isOpen ? "open" : ""}`}
         />
       </button>

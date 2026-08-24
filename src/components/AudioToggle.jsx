@@ -19,7 +19,7 @@ export function AudioToggle() {
       title={muted ? "Unmute Game SFX" : "Mute Game SFX"}
       aria-label={muted ? "Unmute Game SFX" : "Mute Game SFX"}
     >
-      {muted ? <VolumeOffIcon size={18} /> : <VolumeHighIcon size={18} />}
+      {muted ? <VolumeOffIcon size={17} /> : <VolumeHighIcon size={17} />}
       <span className="hud-btn-text">SFX</span>
     </button>
   );
