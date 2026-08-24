@@ -145,6 +145,9 @@ export function LudoGame() {
           )}
         </div>
 
+        <h1 class="sr-only">3D Ludo Game by Deepak Gusaiwal - Play Online</h1>
+        <p class="sr-only">Play Ludo online with an interactive 3D board, animated dice and smooth gameplay.</p>
+
         <div className="hud-actions">
           <button
             type="button"
